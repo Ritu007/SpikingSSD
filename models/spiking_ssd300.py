@@ -19,7 +19,7 @@ class SSD300(nn.Module):
         self.n_classes = n_classes
         self.device = device
         self.base = VGGBase(self.device)
-        # self.aux_convs = AuxiliaryConvolutions()
+        self.aux_convs = AuxiliaryConvolutions(self.device)
         # self.pred_convs = PredictionConvolutions(n_classes)
 
         # Since lower level features (conv4_3_feats) have considerably larger scales, we take the L2 norm and rescale
@@ -50,7 +50,7 @@ class SSD300(nn.Module):
 
         # Run auxiliary convolutions
         # (N, 512, 10, 10),  (N, 256, 5, 5), (N, 256, 3, 3), (N, 256, 1, 1)
-        # conv8_2_feats, conv9_2_feats, conv10_2_feats, conv11_2_feats = self.aux_convs(conv7_feats)
+        conv8_2_feats, conv9_2_feats, conv10_2_feats, conv11_2_feats = self.aux_convs(conv7_feats)
 
         # Run prediction convolutions
         # (N, 8732, 4), (N, 8732, n_classes)
@@ -59,4 +59,5 @@ class SSD300(nn.Module):
 
         # return locs, classes_scores
 
-        return spikes
+        # return spikes, conv4_3_feats, conv7_feats
+        return conv7_feats, conv8_2_feats, conv9_2_feats, conv10_2_feats, conv11_2_feats
