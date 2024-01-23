@@ -8,6 +8,7 @@ import torch
 from models.spiking_ssd300 import *
 # from models.ssd300 import *
 import utils.parameters as param
+from data.encoding import *
 import torchvision
 import torchvision.transforms as transforms
 # from encoding import *
@@ -75,6 +76,16 @@ for real_epoch in range(param.num_epoch):
     for epoch in range(param.sub_epoch):
         print("Sub-epoch: ", epoch)
         for i, (images, labels) in enumerate(custom_dataloader):
+
+            images2 = torch.empty((images.shape[0], param.time_window, images.shape[2], images.shape[3]))
+            labels2 = torch.empty((images.shape[0]), dtype=torch.int64)
+
+            for j in range(images.shape[0]):
+                img0 = frequency_coding(images[j, 0, :, :])
+                print(img0)
+                images2[j, :, :, :] = (img0)
+                labels2[j] = labels[j]
+
 
             snn.zero_grad()
             optimizer.zero_grad()
