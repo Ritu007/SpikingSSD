@@ -6,6 +6,7 @@ import random
 # from model import *
 import torch
 from models.spiking_ssd300 import *
+# from models.ssd300 import *
 import utils.parameters as param
 import torchvision
 import torchvision.transforms as transforms
@@ -17,18 +18,23 @@ data_path = './raw1/'  # ta" if torch.cuda.is_available() else "cpu")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # image_folder = "E:/Project Work/Datasets/Oxford Pets.v2-by-species.yolov8/train/images/"
-image_folder = "E:/Project Work/Datasets/Self Driving Car.v3-fixed-small.yolov8/train/images"
+# image_folder = "E:/Project Work/Datasets/Self Driving Car.v3-fixed-small.yolov8/train/images"
+image_folder = "D:/RiturajMtechProject/Datasets/Self Driving Car.v2-fixed-large.yolov8/export/train/images"
 # image_folder = 'D:/RiturajMtechProject/Datasets/Oxford Pets.v2-by-species.yolov8/train/images'
 # annotations_folder = "E:/Project Work/Datasets/Oxford Pets.v2-by-species.yolov8/train/labels/"
-annotations_folder = "E:/Project Work/Datasets/Self Driving Car.v3-fixed-small.yolov8/train/labels"
+# annotations_folder = "E:/Project Work/Datasets/Self Driving Car.v3-fixed-small.yolov8/train/labels"
+annotations_folder = "D:/RiturajMtechProject/Datasets/Self Driving Car.v2-fixed-large.yolov8/export/train/labels"
+
 # annotations_folder = 'D:/RiturajMtechProject/Datasets/Oxford Pets.v2-by-species.yolov8/train/labels'
 #
 # val_image_folder = "E:/Project Work/Datasets/Oxford Pets.v2-by-species.yolov8/valid/images/"
-val_image_folder = "E:/Project Work/Datasets/Self Driving Car.v3-fixed-small.yolov8/valid/images"
+# val_image_folder = "E:/Project Work/Datasets/Self Driving Car.v3-fixed-small.yolov8/valid/images"
+val_image_folder = "D:/RiturajMtechProject/Datasets/Self Driving Car.v2-fixed-large.yolov8/export/valid/images"
 # val_image_folder = 'D:/RiturajMtechProject/Datasets/Oxford Pets.v2-by-species.yolov8/valid/images'
 # val_annotations_folder = "E:/Project Work/Datasets/Oxford Pets.v2-by-species.yolov8/valid/labels/"
 
-val_annotations_folder = "E:/Project Work/Datasets/Self Driving Car.v3-fixed-small.yolov8/valid/labels"
+# val_annotations_folder = "E:/Project Work/Datasets/Self Driving Car.v3-fixed-small.yolov8/valid/labels"
+val_annotations_folder = "D:/RiturajMtechProject/Datasets/Self Driving Car.v2-fixed-large.yolov8/export/valid/labels"
 # val_annotations_folder = 'D:/RiturajMtechProject/Datasets/Oxford Pets.v2-by-species.yolov8/valid/labels'
 
 custom_dataset = ObjectDetectionDataset(image_folder, annotations_folder, rgb=False, transform=transform)
@@ -74,13 +80,18 @@ for real_epoch in range(param.num_epoch):
             optimizer.zero_grad()
 
             images2 = images.float().to(device)
-            print(images2.shape)
+            print("image:", images2)
             conv7, conv8, conv9, conv10, conv11= snn(images2)
-            print("conv 7", conv7)
-            print("Conv 8", conv8)
-            print("Conv 9", conv9)
-            print("Conv 10", conv10)
-            print("Conv 11", conv11)
+            # print("conv 7", conv7)
+            # print("Conv 8", conv8)
+            # print("Conv 9", conv9)
+            # print("Conv 10", conv10)
+            # print("Conv 11", conv11)
+
+            # locs, class_score = snn(images2)
+            # print("locs: ", locs.shape)
+            # print("class_score: ", class_score.shape)
+
             # print("Output: ",outputs)
             # print("Labels:", labels2)
             # labels_ = torch.zeros(param.batch_size, param.num_classes).scatter_(1, labels2.view(-1, 1), 1)

@@ -11,7 +11,7 @@ class VGGBase(nn.Module):
         super(VGGBase, self).__init__()
 
         # Standard convolutional layers in VGG16
-        self.conv1_1 = nn.Conv2d(3, 64, kernel_size=3, padding=1)  # stride = 1, by default
+        self.conv1_1 = nn.Conv2d(1, 64, kernel_size=3, padding=1)  # stride = 1, by default
         self.conv1_2 = nn.Conv2d(64, 64, kernel_size=3, padding=1)
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
 
@@ -40,7 +40,7 @@ class VGGBase(nn.Module):
         self.conv7 = nn.Conv2d(1024, 1024, kernel_size=1)
 
         # Load pretrained layers
-        self.load_pretrained_layers()
+        # self.load_pretrained_layers()
 
     def forward(self, image):
         """

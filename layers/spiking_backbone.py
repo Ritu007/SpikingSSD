@@ -61,30 +61,36 @@ class VGGBase(nn.Module):
         c7_mem = c7_spike = torch.zeros(param.batch_size, 1024, 19, 19, device=self.device)
 
         for step in range(param.time_window):
-            # print("time step: ", step)
+            print("time step: ", step)
             # image = image[:, step:step+1, :, :]
             out = F.relu(self.conv1_1(image))  # (N, 64, 300, 300)
             # out = F.relu(self.conv1_2(out))  # (N, 64, 300, 300)
+            print("conv 1 1", out)
             c1_mem, c1_spike = mem_update(self.conv1_2, out, c1_mem, c1_spike)
             # print(c1_spike.shape)
+            print("c1 mem", c1_mem)
+            print("c1 spike", c1_spike)
             out = self.pool1(c1_spike)  # (N, 64, 150, 150)
 
             spikes_1 = out
+            print("Spikes 1:", spikes_1)
 
             out = F.relu(self.conv2_1(out))  # (N, 128, 150, 150)
             # out = F.relu(self.conv2_2(out))  # (N, 128, 150, 150)
             c2_mem, c2_spike = mem_update(self.conv2_2, out, c2_mem, c2_spike)
-            out = self.pool2(out)  # (N, 128, 75, 75)
+            out = self.pool2(c2_spike)  # (N, 128, 75, 75)
 
             spikes_2 = out
+            # print("Spikes 2:", spikes_2)
 
             out = F.relu(self.conv3_1(out))  # (N, 256, 75, 75)
             out = F.relu(self.conv3_2(out))  # (N, 256, 75, 75)
             # out = F.relu(self.conv3_3(out))  # (N, 256, 75, 75)
             c3_mem, c3_spike = mem_update(self.conv3_3, out, c3_mem, c3_spike)
-            out = self.pool3(out)  # (N, 256, 38, 38), it would have been 37 if not for ceil_mode = True
+            out = self.pool3(c3_spike)  # (N, 256, 38, 38), it would have been 37 if not for ceil_mode = True
 
             spikes_3 = out
+            # print("Spikes 3:", spikes_3)
 
             out = F.relu(self.conv4_1(out))  # (N, 512, 38, 38)
             out = F.relu(self.conv4_2(out))  # (N, 512, 38, 38)
@@ -92,27 +98,31 @@ class VGGBase(nn.Module):
 
             c4_mem, c4_spike = mem_update(self.conv4_3, out, c4_mem, c4_spike)
             conv4_3_feats = c4_spike  # (N, 512, 38, 38)
-            out = self.pool4(out)  # (N, 512, 19, 19)
+            out = self.pool4(c4_spike)  # (N, 512, 19, 19)
 
             spikes_4 = out
+            # print("Spikes 4:", spikes_4)
 
             out = F.relu(self.conv5_1(out))  # (N, 512, 19, 19)
             out = F.relu(self.conv5_2(out))  # (N, 512, 19, 19)
             out = F.relu(self.conv5_3(out))  # (N, 512, 19, 19)
             c5_mem, c5_spike = mem_update(self.conv5_3, out, c5_mem, c5_spike)
-            out = self.pool5(out)  # (N, 512, 19, 19), pool5 does not reduce dimensions
+            out = self.pool5(c5_spike)  # (N, 512, 19, 19), pool5 does not reduce dimensions
 
             spikes_5 = out
+            # print("Spikes 5:", spikes_5)
 
             # out = F.relu(self.conv6(out))  # (N, 1024, 19, 19)
             c6_mem, c6_spike = mem_update(self.conv6, out, c6_mem, c6_spike)
 
             spikes_6 = c6_spike
+            # print("Spikes 6:", spikes_6)
 
             # conv7_feats = F.relu(self.conv7(out))  # (N, 1024, 19, 19)
             c7_mem, c7_spike = mem_update(self.conv7, spikes_6, c7_mem, c7_spike)
             spikes_7 = c7_spike
             conv7_feats = c7_spike
+            # print("Spikes 7:", spikes_7)
         # Lower-level feature maps
         return spikes_7, conv4_3_feats, conv7_feats
 

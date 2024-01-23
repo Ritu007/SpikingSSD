@@ -28,7 +28,7 @@ class SSD300(nn.Module):
         nn.init.constant_(self.rescale_factors, 20)
 
         # Prior boxes
-        prior_box, prior_box_info = create_prior_boxes()
+        prior_box, prior_box_info = create_prior_boxes(self.device)
         self.priors_cxcy = prior_box
         self.prior_box_info = prior_box_info
         self.to(device)
