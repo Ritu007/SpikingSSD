@@ -82,7 +82,7 @@ for real_epoch in range(param.num_epoch):
 
             for j in range(images.shape[0]):
                 img0 = frequency_coding(images[j, 0, :, :])
-                print(img0)
+                # print(img0)
                 images2[j, :, :, :] = (img0)
                 labels2[j] = labels[j]
 
@@ -90,8 +90,8 @@ for real_epoch in range(param.num_epoch):
             snn.zero_grad()
             optimizer.zero_grad()
 
-            images2 = images.float().to(device)
-            print("image:", images2)
+            images2 = images2.float().to(device)
+            print("image:", images2.shape)
             conv7, conv8, conv9, conv10, conv11= snn(images2)
             # print("conv 7", conv7)
             # print("Conv 8", conv8)

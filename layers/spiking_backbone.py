@@ -62,18 +62,20 @@ class VGGBase(nn.Module):
 
         for step in range(param.time_window):
             print("time step: ", step)
-            # image = image[:, step:step+1, :, :]
-            out = F.relu(self.conv1_1(image))  # (N, 64, 300, 300)
+            new_image = image[:, step:step+1, :, :]
+
+            # print("image", new_image)
+            out = F.relu(self.conv1_1(new_image))  # (N, 64, 300, 300)
             # out = F.relu(self.conv1_2(out))  # (N, 64, 300, 300)
             print("conv 1 1", out)
             c1_mem, c1_spike = mem_update(self.conv1_2, out, c1_mem, c1_spike)
             # print(c1_spike.shape)
-            print("c1 mem", c1_mem)
-            print("c1 spike", c1_spike)
+            # print("c1 mem", c1_mem)
+            # print("c1 spike", c1_spike)
             out = self.pool1(c1_spike)  # (N, 64, 150, 150)
 
             spikes_1 = out
-            print("Spikes 1:", spikes_1)
+            # print("Spikes 1:", spikes_1)
 
             out = F.relu(self.conv2_1(out))  # (N, 128, 150, 150)
             # out = F.relu(self.conv2_2(out))  # (N, 128, 150, 150)
@@ -101,11 +103,11 @@ class VGGBase(nn.Module):
             out = self.pool4(c4_spike)  # (N, 512, 19, 19)
 
             spikes_4 = out
-            # print("Spikes 4:", spikes_4)
+            print("Spikes 4:", spikes_4)
 
             out = F.relu(self.conv5_1(out))  # (N, 512, 19, 19)
             out = F.relu(self.conv5_2(out))  # (N, 512, 19, 19)
-            out = F.relu(self.conv5_3(out))  # (N, 512, 19, 19)
+            # out = F.relu(self.conv5_3(out))  # (N, 512, 19, 19)
             c5_mem, c5_spike = mem_update(self.conv5_3, out, c5_mem, c5_spike)
             out = self.pool5(c5_spike)  # (N, 512, 19, 19), pool5 does not reduce dimensions
 
@@ -122,7 +124,7 @@ class VGGBase(nn.Module):
             c7_mem, c7_spike = mem_update(self.conv7, spikes_6, c7_mem, c7_spike)
             spikes_7 = c7_spike
             conv7_feats = c7_spike
-            # print("Spikes 7:", spikes_7)
+            print("Spikes 7:", spikes_7)
         # Lower-level feature maps
         return spikes_7, conv4_3_feats, conv7_feats
 

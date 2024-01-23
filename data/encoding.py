@@ -1,7 +1,7 @@
 import numpy as np
 from numpy import interp
 from matplotlib import pyplot as plt
-import imageio
+# import imageio
 import math
 # from parameters import param as par
 # from recep_field import rf
