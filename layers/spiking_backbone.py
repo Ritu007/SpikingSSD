@@ -52,6 +52,7 @@ class VGGBase(nn.Module):
         :return: lower-level feature maps conv4_3 and conv7
         """
 
+        print("For image", image)
         c1_mem = c1_spike = torch.zeros(param.batch_size, 64, 300, 300, device=self.device)
         c2_mem = c2_spike = torch.zeros(param.batch_size, 128, 150, 150, device=self.device)
         c3_mem = c3_spike = torch.zeros(param.batch_size, 256, 75, 75, device=self.device)
@@ -60,6 +61,8 @@ class VGGBase(nn.Module):
         c6_mem = c6_spike = torch.zeros(param.batch_size, 1024, 19, 19, device=self.device)
         c7_mem = c7_spike = torch.zeros(param.batch_size, 1024, 19, 19, device=self.device)
 
+        print("c1_mem_init",c1_mem)
+
         for step in range(param.time_window):
             print("time step: ", step)
             new_image = image[:, step:step+1, :, :]
@@ -67,7 +70,7 @@ class VGGBase(nn.Module):
             # print("image", new_image)
             out = F.relu(self.conv1_1(new_image))  # (N, 64, 300, 300)
             # out = F.relu(self.conv1_2(out))  # (N, 64, 300, 300)
-            print("conv 1 1", out)
+            # print("conv 1 1", out)
             c1_mem, c1_spike = mem_update(self.conv1_2, out, c1_mem, c1_spike)
             # print(c1_spike.shape)
             # print("c1 mem", c1_mem)
@@ -103,7 +106,7 @@ class VGGBase(nn.Module):
             out = self.pool4(c4_spike)  # (N, 512, 19, 19)
 
             spikes_4 = out
-            print("Spikes 4:", spikes_4)
+            # print("Spikes 4:", spikes_4)
 
             out = F.relu(self.conv5_1(out))  # (N, 512, 19, 19)
             out = F.relu(self.conv5_2(out))  # (N, 512, 19, 19)
@@ -124,7 +127,7 @@ class VGGBase(nn.Module):
             c7_mem, c7_spike = mem_update(self.conv7, spikes_6, c7_mem, c7_spike)
             spikes_7 = c7_spike
             conv7_feats = c7_spike
-            print("Spikes 7:", spikes_7)
+            # print("Spikes 7:", spikes_7)
         # Lower-level feature maps
         return spikes_7, conv4_3_feats, conv7_feats
 
@@ -169,24 +172,28 @@ class AuxiliaryConvolutions(nn.Module):
         a3_mem = a3_spike = torch.zeros(param.batch_size, 256, 3, 3, device=self.device)
         a4_mem = a4_spike = torch.zeros(param.batch_size, 256, 1, 1, device=self.device)
 
-        out = F.relu(self.conv8_1(conv7_feats))  # (N, 256, 19, 19)
-        # out = F.relu(self.conv8_2(out))  # (N, 512, 10, 10)
-        a1_mem, a1_spike = mem_update(self.conv8_2, out, a1_mem, a1_spike)
-        conv8_2_feats = a1_spike  # (N, 512, 10, 10)
+        for step in range(param.time_window):
 
-        out = F.relu(self.conv9_1(conv8_2_feats))  # (N, 128, 10, 10)
-        # out = F.relu(self.conv9_2(out))  # (N, 256, 5, 5)
-        a2_mem, a2_spike = mem_update(self.conv9_2, out, a2_mem, a2_spike)
-        conv9_2_feats = a2_spike  # (N, 256, 5, 5)
+            out = F.relu(self.conv8_1(conv7_feats))  # (N, 256, 19, 19)
+            # out = F.relu(self.conv8_2(out))  # (N, 512, 10, 10)
+            a1_mem, a1_spike = mem_update(self.conv8_2, out, a1_mem, a1_spike)
+            conv8_2_feats = a1_spike  # (N, 512, 10, 10)
 
-        out = F.relu(self.conv10_1(conv9_2_feats))  # (N, 128, 5, 5)
-        # out = F.relu(self.conv10_2(out))  # (N, 256, 3, 3)
-        a3_mem, a3_spike = mem_update(self.conv10_2, out, a3_mem, a3_spike)
-        conv10_2_feats = a3_spike  # (N, 256, 3, 3)
+            out = F.relu(self.conv9_1(conv8_2_feats))  # (N, 128, 10, 10)
+            # out = F.relu(self.conv9_2(out))  # (N, 256, 5, 5)
+            a2_mem, a2_spike = mem_update(self.conv9_2, out, a2_mem, a2_spike)
+            conv9_2_feats = a2_spike  # (N, 256, 5, 5)
 
-        out = F.relu(self.conv11_1(conv10_2_feats))  # (N, 128, 3, 3)
-        a4_mem, a4_spike = mem_update(self.conv11_2, out, a4_mem, a4_spike)
-        conv11_2_feats = a4_spike  # (N, 256, 1, 1)
+            out = F.relu(self.conv10_1(conv9_2_feats))  # (N, 128, 5, 5)
+            # out = F.relu(self.conv10_2(out))  # (N, 256, 3, 3)
+            a3_mem, a3_spike = mem_update(self.conv10_2, out, a3_mem, a3_spike)
+            conv10_2_feats = a3_spike  # (N, 256, 3, 3)
+
+            out = F.relu(self.conv11_1(conv10_2_feats))  # (N, 128, 3, 3)
+            a4_mem, a4_spike = mem_update(self.conv11_2, out, a4_mem, a4_spike)
+            conv11_2_feats = a4_spike  # (N, 256, 1, 1)
+
+            print("conv 11 features:", conv11_2_feats)
 
         # Higher-level feature maps
         return conv8_2_feats, conv9_2_feats, conv10_2_feats, conv11_2_feats
