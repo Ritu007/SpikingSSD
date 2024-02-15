@@ -61,7 +61,7 @@ class ObjectDetectionDataset(Dataset):
         else:
             img, boxes, labels = self.transform(img, boxes, labels, True)
 
-        return img, labels
+        return img, boxes, labels
 
 
 def transform(img, box, label, rgb=False):
