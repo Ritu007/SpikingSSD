@@ -35,26 +35,27 @@ class ObjectDetectionDataset(Dataset):
         if not self.rgb:
             img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
+
         with open(annotation_path, 'r') as fp:
             # line = fp.readlines()[0].strip()
-            line = fp.readlines()
-            # print(line)
-            if len(line) > 0:
-                new_line = line[0].strip()
+            lines = fp.readlines()
+            print(lines)
 
-            else:
-                new_line = "11 0 0 0 0"
-        values = new_line.split(" ")
-        # print("values", values)
-        # print(values)
-        box = np.array(values[1:], dtype=float)
-        label = int(values[0])
-        # if label == 11 or label == 0:
-        #     print("Hello: ", label)
-        # bbox_info = np.array(values, dtype=float)
-        # print(bbox_info)
-        boxes = torch.tensor(box, dtype=torch.float32)
-        labels = torch.tensor(label, dtype=torch.float32)
+        boxes = []
+        labels = []
+
+        if len(lines) == 0:
+            lines.append("11 0 0 0 0\n")
+        for line in lines:
+            print(line)
+            values = line.split()
+            print(values)
+            box = np.array(values[1:], dtype=float)
+            label = int(values[0])
+            boxes.append(box)
+            labels.append(label)
+        boxes = torch.tensor(boxes, dtype=torch.float32)
+        labels = torch.tensor(labels, dtype=torch.float32)
 
         if not self.rgb:
             img, boxes, labels = self.transform(img, boxes, labels)
@@ -64,7 +65,7 @@ class ObjectDetectionDataset(Dataset):
         return img, boxes, labels
 
 
-def transform(img, box, label, rgb=False):
+def transform(img, boxes, labels, rgb=False):
     if not rgb:
         height, width = img.shape
     else:
@@ -82,11 +83,37 @@ def transform(img, box, label, rgb=False):
         new_image = np.zeros((input_size, input_size), dtype=np.uint8)
         new_image[0:new_height, 0:new_width] = resized
 
-    x, y, w, h = box[0], box[1], box[2], box[3]
-    new_box = [int((x - 0.5 * w) * width / r), int((y - 0.5 * h) * height / r), int(w * width / r), int(h * height / r)]
+    # x, y, w, h = box[0], box[1], box[2], box[3]
+    # new_box = [int((x - 0.5 * w) * width / r), int((y - 0.5 * h) * height / r), int(w * width / r), int(h * height / r)]
 
     img = ToTensor()(new_image)
 
-    return img, new_box, label
+    return img, boxes, labels
+
+
+def collate_fn(batch):
+    images = []
+    bbox_labels = []
+    bbox_masks = []
+    max_num_boxes = param.max_num_boxes
+
+    for img, boxes, labels in batch:
+        images.append(img)
+
+        num_boxes = len(boxes)
+        padded_boxes = torch.zeros((max_num_boxes, 4), dtype=torch.float32) - 1  # Padding value is -1
+        padded_labels = torch.zeros(max_num_boxes, dtype=torch.long) - 1  # Padding value is -1
+
+        padded_boxes[:num_boxes, :] = torch.tensor(boxes)
+        padded_labels[:num_boxes] = torch.tensor(labels)
+
+        bbox_labels.append(padded_labels)
+        bbox_masks.append(torch.tensor([1] * num_boxes + [0] * (max_num_boxes - num_boxes)))
+
+    images = torch.stack(images)
+    bbox_labels = torch.stack(bbox_labels)
+    bbox_masks = torch.stack(bbox_masks)
+
+    return images, bbox_labels, bbox_masks
 
 
