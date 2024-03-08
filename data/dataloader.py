@@ -39,17 +39,17 @@ class ObjectDetectionDataset(Dataset):
         with open(annotation_path, 'r') as fp:
             # line = fp.readlines()[0].strip()
             lines = fp.readlines()
-            print(lines)
+            # print(lines)
 
         boxes = []
         labels = []
 
         if len(lines) == 0:
-            lines.append("11 0 0 0 0\n")
+            lines.append("11 0.5 0.5 1 1\n")
         for line in lines:
-            print(line)
+            # print(line)
             values = line.split()
-            print(values)
+            # print(values)
             box = np.array(values[1:], dtype=float)
             label = int(values[0])
             boxes.append(box)
@@ -95,6 +95,7 @@ def collate_fn(batch):
     images = []
     bbox_labels = []
     bbox_masks = []
+    padded_bbox = []
     max_num_boxes = param.max_num_boxes
 
     for img, boxes, labels in batch:
@@ -109,11 +110,14 @@ def collate_fn(batch):
 
         bbox_labels.append(padded_labels)
         bbox_masks.append(torch.tensor([1] * num_boxes + [0] * (max_num_boxes - num_boxes)))
+        padded_bbox.append(padded_boxes)
 
     images = torch.stack(images)
     bbox_labels = torch.stack(bbox_labels)
     bbox_masks = torch.stack(bbox_masks)
+    padded_bbox = torch.stack(padded_bbox)
+    print("Mask", bbox_masks)
 
-    return images, bbox_labels, bbox_masks
+    return images, bbox_labels, bbox_masks, padded_bbox
 
 

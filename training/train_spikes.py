@@ -9,8 +9,10 @@ from models.spiking_ssd300 import *
 # from models.ssd300 import *
 import utils.parameters as param
 from data.encoding import *
+from loss_function.multibox_loss import MultiBoxLoss
 import torchvision
 import torchvision.transforms as transforms
+from utils.prior_boxes import *
 # from encoding import *
 
 names = 'spiking_model_custom_data_rgb'
@@ -19,23 +21,23 @@ data_path = './raw1/'  # ta" if torch.cuda.is_available() else "cpu")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # image_folder = "E:/Project Work/Datasets/Oxford Pets.v2-by-species.yolov8/train/images/"
-# image_folder = "E:/Project Work/Datasets/Self Driving Car.v3-fixed-small.yolov8/train/images"
-image_folder = "D:/RiturajMtechProject/Datasets/Self Driving Car.v2-fixed-large.yolov8/export/train/images"
+image_folder = "E:/Project Work/Datasets/Self Driving Car.v3-fixed-small.yolov8/train/images"
+# image_folder = "D:/RiturajMtechProject/Datasets/Self Driving Car.v2-fixed-large.yolov8/export/train/images"
 # image_folder = 'D:/RiturajMtechProject/Datasets/Oxford Pets.v2-by-species.yolov8/train/images'
 # annotations_folder = "E:/Project Work/Datasets/Oxford Pets.v2-by-species.yolov8/train/labels/"
-# annotations_folder = "E:/Project Work/Datasets/Self Driving Car.v3-fixed-small.yolov8/train/labels"
-annotations_folder = "D:/RiturajMtechProject/Datasets/Self Driving Car.v2-fixed-large.yolov8/export/train/labels"
+annotations_folder = "E:/Project Work/Datasets/Self Driving Car.v3-fixed-small.yolov8/train/labels"
+# annotations_folder = "D:/RiturajMtechProject/Datasets/Self Driving Car.v2-fixed-large.yolov8/export/train/labels"
 
 # annotations_folder = 'D:/RiturajMtechProject/Datasets/Oxford Pets.v2-by-species.yolov8/train/labels'
 #
 # val_image_folder = "E:/Project Work/Datasets/Oxford Pets.v2-by-species.yolov8/valid/images/"
-# val_image_folder = "E:/Project Work/Datasets/Self Driving Car.v3-fixed-small.yolov8/valid/images"
-val_image_folder = "D:/RiturajMtechProject/Datasets/Self Driving Car.v2-fixed-large.yolov8/export/valid/images"
+val_image_folder = "E:/Project Work/Datasets/Self Driving Car.v3-fixed-small.yolov8/valid/images"
+# val_image_folder = "D:/RiturajMtechProject/Datasets/Self Driving Car.v2-fixed-large.yolov8/export/valid/images"
 # val_image_folder = 'D:/RiturajMtechProject/Datasets/Oxford Pets.v2-by-species.yolov8/valid/images'
 # val_annotations_folder = "E:/Project Work/Datasets/Oxford Pets.v2-by-species.yolov8/valid/labels/"
 
-# val_annotations_folder = "E:/Project Work/Datasets/Self Driving Car.v3-fixed-small.yolov8/valid/labels"
-val_annotations_folder = "D:/RiturajMtechProject/Datasets/Self Driving Car.v2-fixed-large.yolov8/export/valid/labels"
+val_annotations_folder = "E:/Project Work/Datasets/Self Driving Car.v3-fixed-small.yolov8/valid/labels"
+# val_annotations_folder = "D:/RiturajMtechProject/Datasets/Self Driving Car.v2-fixed-large.yolov8/export/valid/labels"
 # val_annotations_folder = 'D:/RiturajMtechProject/Datasets/Oxford Pets.v2-by-species.yolov8/valid/labels'
 
 custom_dataset = ObjectDetectionDataset(image_folder, annotations_folder, rgb=False, transform=transform)
@@ -65,8 +67,12 @@ loss_test_record = list([])
 snn = SSD300(n_classes=param.num_classes, device=device)
 
 snn.to(device)
-criterion = nn.MSELoss()
-optimizer = torch.optim.Adam(snn.parameters(), lr=param.learning_rate)
+# criterion = nn.MSELoss()
+# optimizer = torch.optim.Adam(snn.parameters(), lr=param.learning_rate)
+
+optimizer = torch.optim.SGD(snn.parameters(), lr=param.learning_rate)
+criterion = MultiBoxLoss(param.num_classes, 0.5, True, 0, True, 3, 0.5,
+                         False, True)
 
 # ================================== Train ==============================
 for real_epoch in range(param.num_epoch):
@@ -75,58 +81,64 @@ for real_epoch in range(param.num_epoch):
     start_time = time.time()
     for epoch in range(param.sub_epoch):
         print("Sub-epoch: ", epoch)
-        for i, (images, boxes, labels) in enumerate(custom_dataloader):
+        for i, (images, labels, masks, boxes) in enumerate(custom_dataloader):
 
-            print("Labels", labels)
-            print("Boxes", boxes)
+            # print("Labels", labels.shape)
+            # print("Boxes", boxes[0][0])
 
             images2 = torch.empty((images.shape[0], param.time_window, images.shape[2], images.shape[3]))
-            labels2 = torch.empty((images.shape[0]), dtype=torch.int64)
-            boxes2 = torch.empty((images.shape[0]), dtype=torch.float32)
+            labels2 = torch.empty((images.shape[0], param.max_num_boxes), dtype=torch.int64)
+            boxes2 = torch.empty((images.shape[0], param.max_num_boxes, 4), dtype=torch.float32)
+
 
             for j in range(images.shape[0]):
                 img0 = frequency_coding(images[j, 0, :, :])
                 # print(img0)
                 images2[j, :, :, :] = (img0)
-                labels2[j] = labels[j][0]
-                boxes2[j] = boxes[j][0]
+                labels2[j] = labels[j]
+                boxes2[j] = boxes[j]
+                print(boxes2[j])
+                print(labels2[j])
+            # print(boxes2.shape)
+            labels_new = labels2.unsqueeze(-1)
 
+            # Concatenate 'Boxes' and 'Labels' tensors along the last dimension
+            boxes_with_labels = torch.cat((boxes2, labels_new), dim=-1)
 
+            boxes_with_labels = boxes_with_labels.to(device)
+
+            print(boxes_with_labels.shape)
             snn.zero_grad()
             optimizer.zero_grad()
 
             images2 = images2.float().to(device)
-            print("image:", images2.shape)
-            # locs, class_scores = snn(images2)
+            # print("labels:", labels2.shape)
+
+            # labels_ = torch.zeros(param.batch_size, param.num_classes).scatter_(1, labels2.view(-1, 1), 1)
+            # print("Labels: ", labels_.shape)
+            locs, class_scores = snn(images2)
 
             # print("locaton shape", locs.shape)
             # print("class score shape", class_scores.shape)
-            # print("conv 7", conv7)
-            # print("Conv 8", conv8)
-            # print("Conv 9", conv9)
-            # print("Conv 10", conv10)
-            # print("Conv 11", conv11)
 
-            # locs, class_score = snn(images2)
-            # print("locs: ", locs.shape)
-            # print("class_score: ", class_score.shape)
+            prior_boxes, info = create_prior_boxes(device=device)
 
-            # print("Output: ",outputs)
-            # print("Labels:", labels2)
-            # labels_ = torch.zeros(param.batch_size, param.num_classes).scatter_(1, labels2.view(-1, 1), 1)
-            # print("Labels: ", labels_)
+            outputs = (locs, class_scores, prior_boxes)
+
             # print("labels2:", labels_)
-            # loss = criterion(outputs.cpu(), labels_)
-            # running_loss += loss.item()
+            loss_l, loss_c = criterion(outputs, boxes_with_labels)
 
+            # print("loss_l", loss_l.item())
+            # running_loss += loss.item()
+            #
             # print("Loss: ", loss.item())
             # loss.backward()
-            # optimizer.step()
-            # if (i+1) % 100 == 0:
-            #     print('Real_Epoch [%d/%d], Epoch [%d/%d], Step [%d/%d], Loss: %.5f'
-            #             %( real_epoch, param.num_epoch, epoch, param.sub_epoch, i+1, len(custom_dataset)//param.batch_size, running_loss))
-            #     running_loss = 0
-            #     print('Time elasped:', time.time() - start_time)
+            optimizer.step()
+            if (i+1) % 100 == 0:
+                print('Real_Epoch [%d/%d], Epoch [%d/%d], Step [%d/%d], Loss: %.5f'
+                        %( real_epoch, param.num_epoch, epoch, param.sub_epoch, i+1, len(custom_dataset)//param.batch_size, running_loss))
+                running_loss = 0
+                print('Time elasped:', time.time() - start_time)
 
     # # ================================== Test ==============================
     # correct = 0

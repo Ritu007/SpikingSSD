@@ -47,16 +47,18 @@ class SSD300(nn.Module):
 
         conv4_3_feats, conv7_feats, conv8_2_feats, conv9_2_feats, conv10_2_feats, conv11_2_feats = self.backbone(image)  # (N, 512, 38, 38), (N, 1024, 19, 19)
 
-
-        print("C4 shape", conv4_3_feats.shape)
-        print("C7 shape", conv7_feats.shape)
-        print("C8 shape", conv8_2_feats.shape)
-        print("C9 shape", conv9_2_feats.shape)
-        print("C10 shape", conv10_2_feats.shape)
-        print("C11 shape", conv11_2_feats.shape)
+        #
+        # print("C4 shape", conv4_3_feats.shape)
+        # print("C7 shape", conv7_feats.shape)
+        # print("C8 shape", conv8_2_feats.shape)
+        # print("C9 shape", conv9_2_feats.shape)
+        # print("C10 shape", conv10_2_feats.shape)
+        # print("C11 shape", conv11_2_feats.shape)
 
         # Rescale conv4_3 after L2 norm
-        norm = conv4_3_feats.pow(2).sum(dim=1, keepdim=True).sqrt()  # (N, 1, 38, 38)
+        epsilon = 1e-6
+        norm = conv4_3_feats.pow(2).sum(dim=1, keepdim=True).sqrt() + epsilon  # (N, 1, 38, 38)
+        # print("norm", norm)
         conv4_3_feats = conv4_3_feats / norm  # (N, 512, 38, 38)
         conv4_3_feats = conv4_3_feats * self.rescale_factors  # (N, 512, 38, 38)
 
@@ -69,8 +71,8 @@ class SSD300(nn.Module):
         locs, classes_scores = self.pred_convs(conv4_3_feats, conv7_feats, conv8_2_feats, conv9_2_feats, conv10_2_feats,
                                                conv11_2_feats)
 
-        print("Location", locs)
-        print("Class Scores", classes_scores)
+        # print("Location", locs)
+        # print("Class Scores", classes_scores)
 
         return locs, classes_scores
 
