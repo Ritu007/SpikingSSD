@@ -57,21 +57,35 @@ class MultiBoxLoss(nn.Module):
             targets (tensor): Ground truth boxes and labels for a batch,
                 shape: [batch_size,num_objs,5] (last idx is the label).
         """
+
+        # targets = self.filter_invalid_boxes(targets)
+
         loc_data, conf_data, priors = predictions
         num = loc_data.size(0)
-        print("Num", num)
+        # print("Num", num)
         priors = priors[:loc_data.size(1), :]
 
         num_priors = (priors.size(0))
-        print("num prior", num_priors)
+        # print("num prior", num_priors)
         num_classes = self.num_classes
 
         # match priors (default boxes) and ground truth boxes
         loc_t = torch.Tensor(num, num_priors, 4)
         conf_t = torch.LongTensor(num, num_priors)
+        # print("Targets", targets.shape)
         for idx in range(num):
             truths = targets[idx][:, :-1].data
+            # print("Truths", truths.shape)
             labels = targets[idx][:, -1].data
+            # print(labels.shape)
+            non_padded_mask = (labels != -1).unsqueeze(1).expand_as(truths)
+            # print("non padded mask", non_padded_mask)
+            truths = truths[non_padded_mask].view(-1, 4)
+            # print("Truths non padded", truths)
+            labels = labels[labels != -1]
+            # print("labels non padded", labels)
+
+
             defaults = priors.data
             match(self.threshold, truths, defaults, self.variance, labels,
                   loc_t, conf_t, idx)
@@ -82,12 +96,14 @@ class MultiBoxLoss(nn.Module):
         loc_t = Variable(loc_t, requires_grad=False)
         conf_t = Variable(conf_t, requires_grad=False)
 
-        print("Conf_t", conf_t.shape)
+        # print("loc_t", loc_t.shape)
+        # print("Conf_t", conf_t.shape)
+
 
         pos = conf_t > 0
         num_pos = pos.sum(dim=1, keepdim=True)
 
-        print("pos", pos.shape)
+        # print("pos", pos.shape)
         #
         # print("num pos", num_pos)
 
@@ -95,13 +111,13 @@ class MultiBoxLoss(nn.Module):
         # Shape: [batch,num_priors,4]
         pos_idx = pos.unsqueeze(pos.dim()).expand_as(loc_data)
 
-        print("pos idx", pos_idx.shape)
+        # print("pos idx", pos_idx.shape)
         loc_p = loc_data[pos_idx].view(-1, 4)
 
-        print("loc_p", loc_p)
-        print("loc_t", loc_t)
+        # print("loc_p", loc_p)
+        # print("loc_t", loc_t)
         loc_t = loc_t[pos_idx].view(-1, 4)
-        print("loc_t", loc_t)
+        # print("loc_t", loc_t)
         loss_l = F.smooth_l1_loss(loc_p, loc_t, size_average=False)
 
 
@@ -109,28 +125,28 @@ class MultiBoxLoss(nn.Module):
         # Compute max conf across batch for hard negative mining
         batch_conf = conf_data.view(-1, self.num_classes)
 
-        print("batch conf", batch_conf.shape)
-
-        print("min", torch.min(conf_t.view(-1)))
-        print("max", torch.max(conf_t.view(-1)))
+        # print("batch conf", batch_conf.shape)
+        #
+        # print("min", torch.min(conf_t.view(-1)))
+        # print("max", torch.max(conf_t.view(-1)))
 
         conf_t_flat = conf_t.view(-1,1)
 
 
-        print("conft_t", conf_t_flat.shape)
+        # print("conft_t", conf_t_flat.shape)
 
         batch_conf_gather = torch.gather(batch_conf, 1, conf_t_flat)
-        print("batch_conf)gather", batch_conf_gather)
+        # print("batch_conf)gather", batch_conf_gather)
         # loss_c = log_sum_exp(batch_conf) - batch_conf.gather(1, conf_t.view(-1, 1))
         loss_c = log_sum_exp(batch_conf) - batch_conf_gather
         # print("loss l", loss_l)
-        print("batch conf", batch_conf)
+        # print("batch conf", batch_conf)
         # print("lossc", loss_c.shape)
         pos_flat = pos.view(-1)
 
         # Hard Negative Mining
         loss_c[pos_flat] = 0  # filter out pos boxes for now
-        print("loss c", loss_c)
+        # print("loss c", loss_c)
         loss_c = loss_c.view(num, -1)
 
 
@@ -139,23 +155,23 @@ class MultiBoxLoss(nn.Module):
         num_pos = pos.long().sum(1, keepdim=True)
         num_neg = torch.clamp(self.negpos_ratio*num_pos, max=pos.size(1)-1)
         neg = idx_rank < num_neg.expand_as(idx_rank)
-        print("num pos", num_pos)
-        print("num neg", num_neg)
-
-        print("confshape", conf_data)
+        # print("num pos", num_pos)
+        # print("num neg", num_neg)
+        #
+        # print("confshape", conf_data)
 
         # Confidence Loss Including Positive and Negative Examples
         pos_idx = pos.unsqueeze(2).expand_as(conf_data)
         neg_idx = neg.unsqueeze(2).expand_as(conf_data)
 
-        print("pos id", pos_idx)
-        print("neg id", neg_idx)
-
-        print("posneg", pos_idx + neg_idx)
-        print("condition", (pos_idx+neg_idx).gt(0))
+        # print("pos id", pos_idx)
+        # print("neg id", neg_idx)
+        #
+        # print("posneg", pos_idx + neg_idx)
+        # print("condition", (pos_idx+neg_idx).gt(0))
         conf_p = conf_data[(pos_idx+neg_idx).gt(0)].view(-1, self.num_classes)
 
-        print("pos_conf", conf_t.shape)
+        # print("pos_conf", conf_t.shape)
         targets_weighted = conf_t[(pos+neg).gt(0)]
         loss_c = F.cross_entropy(conf_p, targets_weighted, size_average=False)
 
@@ -163,10 +179,34 @@ class MultiBoxLoss(nn.Module):
 
         N = num_pos.data.sum()
 
-        print ("N", N)
+        # print ("N", N)
         loss_l /= N
         loss_c /= N
-        print("loss_l", loss_l)
-        print("loss_c", loss_c)
+        # print("loss_l", loss_l)
+        # print("loss_c", loss_c)
 
         return loss_l, loss_c
+
+    def filter_invalid_boxes(self, targets):
+        boxes_with_labels, masks = targets
+        # print('masks_inside', masks)
+        # print('boxes inside', boxes_with_labels)
+
+        reshaped_mask = masks.unsqueeze(-1)
+        reshaped_mask = reshaped_mask.expand_as(boxes_with_labels).to('cuda')
+        filtered_bbox_labels_tensor = boxes_with_labels * reshaped_mask
+
+        num_boxes_per_batch = masks.sum(dim=1)
+
+        valid_bbox_labels_tensor = []
+        for i in range(filtered_bbox_labels_tensor.size(0)):
+            num_valid_boxes = num_boxes_per_batch[i].item()
+            print(num_valid_boxes)
+            valid_bbox_labels_tensor.append(filtered_bbox_labels_tensor[i, :num_valid_boxes, :])
+
+        # Convert list to tensor
+        valid_bbox_labels_tensor = torch.stack(valid_bbox_labels_tensor)
+
+        print(valid_bbox_labels_tensor)
+
+        return boxes_with_labels

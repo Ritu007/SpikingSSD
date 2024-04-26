@@ -15,26 +15,27 @@ class VGGBase(nn.Module):
         # Standard convolutional layers in VGG16
         self.conv1_1 = nn.Conv2d(1, 64, kernel_size=3, padding=1)  # stride = 1, by default
         self.conv1_2 = nn.Conv2d(64, 64, kernel_size=3, padding=1)
-        self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.pool1 = nn.AvgPool2d(kernel_size=2, stride=2)
+
 
         self.conv2_1 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
         self.conv2_2 = nn.Conv2d(128, 128, kernel_size=3, padding=1)
-        self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.pool2 = nn.AvgPool2d(kernel_size=2, stride=2)
 
         self.conv3_1 = nn.Conv2d(128, 256, kernel_size=3, padding=1)
         self.conv3_2 = nn.Conv2d(256, 256, kernel_size=3, padding=1)
         self.conv3_3 = nn.Conv2d(256, 256, kernel_size=3, padding=1)
-        self.pool3 = nn.MaxPool2d(kernel_size=2, stride=2, ceil_mode=True)  # ceiling (not floor) here for even dims
+        self.pool3 = nn.AvgPool2d(kernel_size=2, stride=2, ceil_mode=True)  # ceiling (not floor) here for even dims
 
         self.conv4_1 = nn.Conv2d(256, 512, kernel_size=3, padding=1)
         self.conv4_2 = nn.Conv2d(512, 512, kernel_size=3, padding=1)
         self.conv4_3 = nn.Conv2d(512, 512, kernel_size=3, padding=1)
-        self.pool4 = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.pool4 = nn.AvgPool2d(kernel_size=2, stride=2)
 
         self.conv5_1 = nn.Conv2d(512, 512, kernel_size=3, padding=1)
         self.conv5_2 = nn.Conv2d(512, 512, kernel_size=3, padding=1)
         self.conv5_3 = nn.Conv2d(512, 512, kernel_size=3, padding=1)
-        self.pool5 = nn.MaxPool2d(kernel_size=3, stride=1, padding=1)  # retains size because stride is 1 (and padding)
+        self.pool5 = nn.AvgPool2d(kernel_size=3, stride=1, padding=1)  # retains size because stride is 1 (and padding)
 
         # Replacements for FC6 and FC7 in VGG16
         self.conv6 = nn.Conv2d(512, 1024, kernel_size=3, padding=6, dilation=6)  # atrous convolution

@@ -22,39 +22,21 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # image_folder = "E:/Project Work/Datasets/Oxford Pets.v2-by-species.yolov8/train/images/"
 image_folder = "E:/Project Work/Datasets/Self Driving Car.v3-fixed-small.yolov8/train/images"
+image_folder = 'E:/Project Work/Datasets/pascalvoc2012/archive/VOC2012_train_val/VOC2012_train_val/train_val/images'
 # image_folder = "D:/RiturajMtechProject/Datasets/Self Driving Car.v2-fixed-large.yolov8/export/train/images"
 # image_folder = 'D:/RiturajMtechProject/Datasets/Oxford Pets.v2-by-species.yolov8/train/images'
 # annotations_folder = "E:/Project Work/Datasets/Oxford Pets.v2-by-species.yolov8/train/labels/"
 annotations_folder = "E:/Project Work/Datasets/Self Driving Car.v3-fixed-small.yolov8/train/labels"
 # annotations_folder = "D:/RiturajMtechProject/Datasets/Self Driving Car.v2-fixed-large.yolov8/export/train/labels"
-
+annotations_folder = 'E:/Project Work/Datasets/pascalvoc2012/archive/VOC2012_train_val/VOC2012_train_val/train_val/labels'
 # annotations_folder = 'D:/RiturajMtechProject/Datasets/Oxford Pets.v2-by-species.yolov8/train/labels'
-#
-# val_image_folder = "E:/Project Work/Datasets/Oxford Pets.v2-by-species.yolov8/valid/images/"
-val_image_folder = "E:/Project Work/Datasets/Self Driving Car.v3-fixed-small.yolov8/valid/images"
-# val_image_folder = "D:/RiturajMtechProject/Datasets/Self Driving Car.v2-fixed-large.yolov8/export/valid/images"
-# val_image_folder = 'D:/RiturajMtechProject/Datasets/Oxford Pets.v2-by-species.yolov8/valid/images'
-# val_annotations_folder = "E:/Project Work/Datasets/Oxford Pets.v2-by-species.yolov8/valid/labels/"
-
-val_annotations_folder = "E:/Project Work/Datasets/Self Driving Car.v3-fixed-small.yolov8/valid/labels"
-# val_annotations_folder = "D:/RiturajMtechProject/Datasets/Self Driving Car.v2-fixed-large.yolov8/export/valid/labels"
-# val_annotations_folder = 'D:/RiturajMtechProject/Datasets/Oxford Pets.v2-by-species.yolov8/valid/labels'
 
 custom_dataset = ObjectDetectionDataset(image_folder, annotations_folder, rgb=False, transform=transform)
 custom_dataloader = DataLoader(custom_dataset, batch_size=param.batch_size, collate_fn=collate_fn, shuffle=True, num_workers=0)
 
 
-validation_dataset = ObjectDetectionDataset(val_image_folder, val_annotations_folder,rgb=False,  transform=transform)
-validation_dataloader = DataLoader(validation_dataset, batch_size=param.batch_size, shuffle=True, num_workers=0)
-
-
 print("Total Number of Samples:", len(custom_dataset))
-print("Total Number of Samples:", len(validation_dataset))
-
-# for images, targets in custom_dataloader:
-#     print(f"Batch Size: {images.size(0)}")
-    # print(images)
-    # print(targets)
+# print("Total Number of Samples:", len(validation_dataset))
 
 best_acc = 0  # best test accuracy
 start_epoch = 0  # start from epoch 0 or last checkpoint epoch
@@ -97,17 +79,19 @@ for real_epoch in range(param.num_epoch):
                 images2[j, :, :, :] = (img0)
                 labels2[j] = labels[j]
                 boxes2[j] = boxes[j]
-                print(boxes2[j])
-                print(labels2[j])
+                # print(boxes2[j])
+                # print(labels2[j])
             # print(boxes2.shape)
             labels_new = labels2.unsqueeze(-1)
 
             # Concatenate 'Boxes' and 'Labels' tensors along the last dimension
             boxes_with_labels = torch.cat((boxes2, labels_new), dim=-1)
 
+            # print("filtered", filtered_bbox_labels_tensor)
+
             boxes_with_labels = boxes_with_labels.to(device)
 
-            print(boxes_with_labels.shape)
+            # print(boxes_with_labels.shape)
             snn.zero_grad()
             optimizer.zero_grad()
 
@@ -124,21 +108,28 @@ for real_epoch in range(param.num_epoch):
             prior_boxes, info = create_prior_boxes(device=device)
 
             outputs = (locs, class_scores, prior_boxes)
+            targets = (boxes_with_labels, masks)
 
             # print("labels2:", labels_)
             loss_l, loss_c = criterion(outputs, boxes_with_labels)
 
             # print("loss_l", loss_l.item())
-            # running_loss += loss.item()
+            loss = loss_c + loss_l
+            running_loss += loss.item()
             #
-            # print("Loss: ", loss.item())
-            # loss.backward()
+            print("Loss: ", loss, "conf_loss", loss_c, "loc_loss", loss_l)
+            loss.backward()
             optimizer.step()
             if (i+1) % 100 == 0:
                 print('Real_Epoch [%d/%d], Epoch [%d/%d], Step [%d/%d], Loss: %.5f'
                         %( real_epoch, param.num_epoch, epoch, param.sub_epoch, i+1, len(custom_dataset)//param.batch_size, running_loss))
                 running_loss = 0
                 print('Time elasped:', time.time() - start_time)
+
+if not os.path.isdir('trained_models'):
+    os.mkdir('trained_models')
+
+torch.save(snn.state_dict(), './trained_models/pascal_object_detection_model.pth')
 
     # # ================================== Test ==============================
     # correct = 0

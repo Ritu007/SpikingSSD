@@ -52,6 +52,8 @@ class ObjectDetectionDataset(Dataset):
             # print(values)
             box = np.array(values[1:], dtype=float)
             label = int(values[0])
+            # if label == 0:
+            #     print(img_path)
             boxes.append(box)
             labels.append(label)
         boxes = torch.tensor(boxes, dtype=torch.float32)
@@ -116,7 +118,7 @@ def collate_fn(batch):
     bbox_labels = torch.stack(bbox_labels)
     bbox_masks = torch.stack(bbox_masks)
     padded_bbox = torch.stack(padded_bbox)
-    print("Mask", bbox_masks)
+    # print("Mask", bbox_masks.shape)
 
     return images, bbox_labels, bbox_masks, padded_bbox
 

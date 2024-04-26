@@ -43,11 +43,11 @@ def intersect(box_a, box_b):
                        box_b[:, 2:].unsqueeze(0).expand(A, B, 2))
     min_xy = torch.max(box_a[:, :2].unsqueeze(1).expand(A, B, 2),
                        box_b[:, :2].unsqueeze(0).expand(A, B, 2))
-    print("max xy", max_xy.shape)
-    print("min xy", min_xy.shape)
+    # print("max xy", max_xy.shape)
+    # print("min xy", min_xy.shape)
 
     inter = torch.clamp((max_xy - min_xy), min=0)
-    print("inter", inter)
+    # print("inter", inter)
     return inter[:, :, 0] * inter[:, :, 1]
 
 
@@ -69,13 +69,13 @@ def jaccard(box_a, box_b):
     area_b = ((box_b[:, 2]-box_b[:, 0]) *
               (box_b[:, 3]-box_b[:, 1])).unsqueeze(0).expand_as(inter)  # [A,B]
 
-    print("box a", box_a)
-    print("area a", area_a)
-    print("box b", box_b)
-    print("area b", area_b)
-    print("intersect", inter)
+    # print("box a", box_a)
+    # print("area a", area_a)
+    # print("box b", box_b)
+    # print("area b", area_b)
+    # print("intersect", inter)
     union = area_a + area_b - inter
-    print("union", union)
+    # print("union", union)
     return inter / union  # [A,B]
 
 
@@ -96,7 +96,7 @@ def match(threshold, truths, priors, variances, labels, loc_t, conf_t, idx):
     Return:
         The matched indices corresponding to 1)location and 2)confidence preds.
     """
-    # print("truth", truths)
+    # print("truth", truths.shape)
     # print("priors", priors)
     # print("pointformpriors",point_form(priors))
     # jaccard index
@@ -105,7 +105,8 @@ def match(threshold, truths, priors, variances, labels, loc_t, conf_t, idx):
         point_form(priors)
     )
 
-    print("overlap", overlaps)
+    # print("overlap", overlaps.shape)
+    # print("overlap", overlaps)
     # (Bipartite Matching)
     # [1,num_objects] best prior for each ground truth
     best_prior_overlap, best_prior_idx = overlaps.max(1, keepdim=True)
@@ -116,24 +117,26 @@ def match(threshold, truths, priors, variances, labels, loc_t, conf_t, idx):
     best_prior_idx.squeeze_(1)
     best_prior_overlap.squeeze_(1)
     best_truth_overlap.index_fill_(0, best_prior_idx, 2)  # ensure best prior
-
-    print("best prior", best_prior_idx)
-    print("best truth", best_truth_idx)
+    #
+    # print("best prior", best_prior_idx)
+    # print("best truth", best_truth_idx)
     # TODO refactor: index  best_prior_idx with long tensor
     # ensure every gt matches with its prior of max overlap
     for j in range(best_prior_idx.size(0)):
         best_truth_idx[best_prior_idx[j]] = j
     matches = truths[best_truth_idx]          # Shape: [num_priors,4]
-    print("matches", matches)
-    conf = labels[best_truth_idx]  + 1       # Shape: [num_priors]
-    print("Conf", conf)
+    # print("matches", matches)
+    conf = labels[best_truth_idx] + 1       # Shape: [num_priors]
+    # print("Conf", conf)
+    # print("best truth overlap", best_truth_overlap)
     conf[best_truth_overlap < threshold] = 0  # label as background
-    print("conf1", conf)
+    # print("conf1", conf)
     loc = encode(matches, priors, variances)
-    print("loc", loc)
+    # print("loc", loc)
     loc_t[idx] = loc    # [num_priors,4] encoded offsets to learn
-    print("loc_t_box_utils", loc_t)
+    # print("loc_t_box_utils", loc_t)
     conf_t[idx] = conf  # [num_priors] top class label for each prior
+    # print("conf_t_box_utils", conf_t)
 
 
 def encode(matched, priors, variances):
@@ -148,22 +151,42 @@ def encode(matched, priors, variances):
     Return:
         encoded boxes (tensor), Shape: [num_priors, 4]
     """
-    print("min", torch.min(matched))
-    # dist b/t match center and prior's center
+    matched = point_form(matched)
+    # print("variances", variances)
+    # print("min", torch.min(matched))
+    # # dist b/t match center and prior's center
     g_cxcy = (matched[:, :2] + matched[:, 2:])/2 - priors[:, :2]
     # encode variance
-    print("g_cxcy", g_cxcy)
+    # print("g_cxcy", g_cxcy)
     g_cxcy /= (variances[0] * priors[:, 2:])
-    print("g_cxcy", g_cxcy)
+    # print("g_cxcy", g_cxcy)
     # match wh / prior wh
     g_wh = (matched[:, 2:] - matched[:, :2]) / priors[:, 2:]
-    print("g_wh", g_wh)
-    print("log_gwhy", torch.log(g_wh))
-    print("variance1", variances[1])
+    # print("g_wh", g_wh)
+    # print("log_gwhy", torch.log(g_wh))
+    # print("variance1", variances[1])
     g_wh = torch.log(g_wh) / variances[1]
-    print("g_wh", g_wh)
+    # print("g_wh", g_wh)
     # return target for smooth_l1_loss
     return torch.cat([g_cxcy, g_wh], 1)  # [num_priors,4]
+
+    # print("variances", variances)
+    # print("min", torch.min(matched))
+    # # dist b/t match center and prior's center
+    # g_cxcy = (matched[:, :2] - priors[:, :2]) / priors[:, 2:]
+    # # encode variance
+    # # print("g_cxcy", g_cxcy)
+    # g_cxcy /= variances[0]
+    # # print("g_cxcy", g_cxcy)
+    # # match wh / prior wh
+    # g_wh = matched[:, 2:] / priors[:, 2:]
+    # # print("g_wh", g_wh)
+    # # print("log_gwhy", torch.log(g_wh))
+    # # print("variance1", variances[1])
+    # g_wh = torch.log(g_wh) / variances[1]
+    # # print("g_wh", g_wh)
+    # # return target for smooth_l1_loss
+    # return torch.cat([g_cxcy, g_wh], 1)  # [num_priors,4]
 
 
 # Adapted from https://github.com/Hakuyume/chainer-ssd
