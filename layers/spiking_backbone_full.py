@@ -51,15 +51,19 @@ class VGGBackbone(nn.Module):
 
         self.conv8_1 = nn.Conv2d(1024, 256, kernel_size=1, padding=0)  # stride = 1, by default
         self.conv8_2 = nn.Conv2d(256, 512, kernel_size=3, stride=2, padding=1)  # dim. reduction because stride > 1
+        self.inorm_8 = nn.InstanceNorm2d(512)
 
         self.conv9_1 = nn.Conv2d(512, 128, kernel_size=1, padding=0)
         self.conv9_2 = nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=1)  # dim. reduction because stride > 1
+        self.inorm_9 = nn.InstanceNorm2d(256)
 
         self.conv10_1 = nn.Conv2d(256, 128, kernel_size=1, padding=0)
         self.conv10_2 = nn.Conv2d(128, 256, kernel_size=3, padding=0)  # dim. reduction because padding = 0
+        self.inorm_10 = nn.InstanceNorm2d(256)
 
         self.conv11_1 = nn.Conv2d(256, 128, kernel_size=1, padding=0)
         self.conv11_2 = nn.Conv2d(128, 256, kernel_size=3, padding=0)  # dim. reduction because padding = 0
+        # self.inorm_11 = nn.InstanceNorm2d(256)
 
         self.init_conv2d()
         # Load pretrained layers
@@ -178,23 +182,27 @@ class VGGBackbone(nn.Module):
             out = F.relu(self.conv8_1(conv7_feats))  # (N, 256, 19, 19)
             # out = F.relu(self.conv8_2(out))  # (N, 512, 10, 10)
             a1_mem, a1_spike = mem_update(self.conv8_2, out, a1_mem, a1_spike)
+            a1_spike = self.inorm_8(a1_spike)
             conv8_2_feats = a1_spike  # (N, 512, 10, 10)
             a1_sumspike += conv8_2_feats
 
             out = F.relu(self.conv9_1(conv8_2_feats))  # (N, 128, 10, 10)
             # out = F.relu(self.conv9_2(out))  # (N, 256, 5, 5)
             a2_mem, a2_spike = mem_update(self.conv9_2, out, a2_mem, a2_spike)
+            a2_spike = self.inorm_9(a2_spike)
             conv9_2_feats = a2_spike  # (N, 256, 5, 5)
             a2_sumspike += conv9_2_feats
 
             out = F.relu(self.conv10_1(conv9_2_feats))  # (N, 128, 5, 5)
             # out = F.relu(self.conv10_2(out))  # (N, 256, 3, 3)
             a3_mem, a3_spike = mem_update(self.conv10_2, out, a3_mem, a3_spike)
+            a3_spike = self.inorm_10(a3_spike)
             conv10_2_feats = a3_spike  # (N, 256, 3, 3)
             a3_sumspike += conv10_2_feats
 
             out = F.relu(self.conv11_1(conv10_2_feats))  # (N, 128, 3, 3)
             a4_mem, a4_spike = mem_update(self.conv11_2, out, a4_mem, a4_spike)
+            # a4_spike = self.inorm_11(a4_spike)
             conv11_2_feats = a4_spike  # (N, 256, 1, 1)
             a4_sumspike += conv11_2_feats
 

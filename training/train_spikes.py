@@ -53,7 +53,7 @@ snn.to(device)
 # optimizer = torch.optim.Adam(snn.parameters(), lr=param.learning_rate)
 
 optimizer = torch.optim.SGD(snn.parameters(), lr=param.learning_rate)
-criterion = MultiBoxLoss(param.num_classes, 0.5, True, 0, True, 3, 0.5,
+criterion = MultiBoxLoss(param.num_classes, 0.3, True, 0, True, 3, 0.5,
                          False, True)
 
 # ================================== Train ==============================

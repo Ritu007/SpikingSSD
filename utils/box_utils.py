@@ -126,7 +126,7 @@ def match(threshold, truths, priors, variances, labels, loc_t, conf_t, idx):
         best_truth_idx[best_prior_idx[j]] = j
     matches = truths[best_truth_idx]          # Shape: [num_priors,4]
     # print("matches", matches)
-    conf = labels[best_truth_idx] + 1       # Shape: [num_priors]
+    conf = labels[best_truth_idx]       # Shape: [num_priors]
     # print("Conf", conf)
     # print("best truth overlap", best_truth_overlap)
     conf[best_truth_overlap < threshold] = 0  # label as background

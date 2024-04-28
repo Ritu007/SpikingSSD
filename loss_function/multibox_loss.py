@@ -97,7 +97,16 @@ class MultiBoxLoss(nn.Module):
         conf_t = Variable(conf_t, requires_grad=False)
 
         # print("loc_t", loc_t.shape)
+        # print("Conf_t", conf_t)
         # print("Conf_t", conf_t.shape)
+
+        non_zero_mask = conf_t > 0
+
+        # Count the non-zero values in each batch
+        non_zero_counts_per_batch = non_zero_mask.sum(dim=1)
+
+        # Output the counts for each batch
+        # print("Number of non-zero values in each batch:", non_zero_counts_per_batch)
 
 
         pos = conf_t > 0
@@ -113,11 +122,15 @@ class MultiBoxLoss(nn.Module):
 
         # print("pos idx", pos_idx.shape)
         loc_p = loc_data[pos_idx].view(-1, 4)
-
+        #
         # print("loc_p", loc_p)
+        # print("loc_p", loc_p.shape)
+        #
         # print("loc_t", loc_t)
+        # print("loc_p", loc_t.shape)
         loc_t = loc_t[pos_idx].view(-1, 4)
         # print("loc_t", loc_t)
+        # print("loc_p", loc_t.shape)
         loss_l = F.smooth_l1_loss(loc_p, loc_t, size_average=False)
 
 
@@ -126,6 +139,7 @@ class MultiBoxLoss(nn.Module):
         batch_conf = conf_data.view(-1, self.num_classes)
 
         # print("batch conf", batch_conf.shape)
+        # print("batch conf", batch_conf)
         #
         # print("min", torch.min(conf_t.view(-1)))
         # print("max", torch.max(conf_t.view(-1)))
@@ -136,13 +150,13 @@ class MultiBoxLoss(nn.Module):
         # print("conft_t", conf_t_flat.shape)
 
         batch_conf_gather = torch.gather(batch_conf, 1, conf_t_flat)
-        # print("batch_conf)gather", batch_conf_gather)
+        # print("batch_conf_gather", batch_conf_gather)
         # loss_c = log_sum_exp(batch_conf) - batch_conf.gather(1, conf_t.view(-1, 1))
         loss_c = log_sum_exp(batch_conf) - batch_conf_gather
-        # print("loss l", loss_l)
+        # print("logsum", log_sum_exp(batch_conf))
         # print("batch conf", batch_conf)
-        # print("lossc", loss_c.shape)
-        pos_flat = pos.view(-1)
+        # print("lossc", loss_c)
+        pos_flat = pos.view(-1,1)
 
         # Hard Negative Mining
         loss_c[pos_flat] = 0  # filter out pos boxes for now
@@ -157,13 +171,15 @@ class MultiBoxLoss(nn.Module):
         neg = idx_rank < num_neg.expand_as(idx_rank)
         # print("num pos", num_pos)
         # print("num neg", num_neg)
+        # print(" neg", neg)
+
         #
         # print("confshape", conf_data)
 
         # Confidence Loss Including Positive and Negative Examples
         pos_idx = pos.unsqueeze(2).expand_as(conf_data)
         neg_idx = neg.unsqueeze(2).expand_as(conf_data)
-
+        #
         # print("pos id", pos_idx)
         # print("neg id", neg_idx)
         #
@@ -171,8 +187,16 @@ class MultiBoxLoss(nn.Module):
         # print("condition", (pos_idx+neg_idx).gt(0))
         conf_p = conf_data[(pos_idx+neg_idx).gt(0)].view(-1, self.num_classes)
 
-        # print("pos_conf", conf_t.shape)
+        # print("conf_p", conf_p)
+        # print("conf_p", conf_p.shape)
+        #
+        # print("conf_t", conf_t)
+        # print("conf_t", conf_t.shape)
         targets_weighted = conf_t[(pos+neg).gt(0)]
+        # print("targets_weighted", targets_weighted)
+        # print("targets_weighted", targets_weighted.shape)
+        # print("pos", pos.shape)
+        # print("neg", neg.shape)
         loss_c = F.cross_entropy(conf_p, targets_weighted, size_average=False)
 
         # Sum of losses: L(x,c,l,g) = (Lconf(x, c) + αLloc(x,l,g)) / N
