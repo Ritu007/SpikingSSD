@@ -125,8 +125,18 @@ act_fun = ActFun.apply
 
 # membrane potential update
 
-
 def mem_update(ops, x, mem, spike):
-    mem = mem * param.decay + ops(x)
+    mem = mem * param.decay + F.relu(ops(x))
+    spike = act_fun(mem)  # act_fun : approximation firing function
+    return mem, spike
+
+
+#  Membrane potential update with pooling included in the operations
+def mem_update_pool(ops, pool, x, mem, spike, inorm, norm=False):
+    if norm:
+        out = pool(F.relu(inorm(ops(x))))
+    else:
+        out = pool(F.relu(ops(x)))
+    mem = mem * param.decay + out
     spike = act_fun(mem)  # act_fun : approximation firing function
     return mem, spike

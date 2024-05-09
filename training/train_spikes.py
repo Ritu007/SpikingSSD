@@ -20,6 +20,8 @@ count = 0
 data_path = './raw1/'  # ta" if torch.cuda.is_available() else "cpu")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+print(device)
+
 # image_folder = "E:/Project Work/Datasets/Oxford Pets.v2-by-species.yolov8/train/images/"
 image_folder = "E:/Project Work/Datasets/Self Driving Car.v3-fixed-small.yolov8/train/images"
 image_folder = 'E:/Project Work/Datasets/pascalvoc2012/archive/VOC2012_train_val/VOC2012_train_val/train_val/images'
@@ -74,8 +76,9 @@ for real_epoch in range(param.num_epoch):
 
 
             for j in range(images.shape[0]):
-                img0 = frequency_coding(images[j, 0, :, :])
-                # print(img0)
+                # print("image", images[j, 0, :, :])
+                img0 = population_encoding(images[j, 0, :, :])
+                print("image after coding",img0)
                 images2[j, :, :, :] = (img0)
                 labels2[j] = labels[j]
                 boxes2[j] = boxes[j]

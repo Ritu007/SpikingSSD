@@ -14,32 +14,32 @@ class VGGBackbone(nn.Module):
         self.device = device
         # Standard convolutional layers in VGG16
         self.conv1_1 = nn.Conv2d(1, 64, kernel_size=3, padding=1)  # stride = 1, by default
-        self.conv1_2 = nn.Conv2d(64, 64, kernel_size=3, padding=1)
+        # self.conv1_2 = nn.Conv2d(64, 64, kernel_size=3, padding=1)
         self.inorm_1 = nn.InstanceNorm2d(64)
-        self.pool1 = nn.AvgPool2d(kernel_size=2, stride=2)
+        self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
 
         self.conv2_1 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
-        self.conv2_2 = nn.Conv2d(128, 128, kernel_size=3, padding=1)
+        # self.conv2_2 = nn.Conv2d(128, 128, kernel_size=3, padding=1)
         self.inorm_2 = nn.InstanceNorm2d(128)
-        self.pool2 = nn.AvgPool2d(kernel_size=2, stride=2)
+        self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
 
         self.conv3_1 = nn.Conv2d(128, 256, kernel_size=3, padding=1)
-        self.conv3_2 = nn.Conv2d(256, 256, kernel_size=3, padding=1)
-        self.conv3_3 = nn.Conv2d(256, 256, kernel_size=3, padding=1)
+        # self.conv3_2 = nn.Conv2d(256, 256, kernel_size=3, padding=1)
+        # self.conv3_3 = nn.Conv2d(256, 256, kernel_size=3, padding=1)
         self.inorm_3 = nn.InstanceNorm2d(256)
-        self.pool3 = nn.AvgPool2d(kernel_size=2, stride=2, ceil_mode=True)  # ceiling (not floor) here for even dims
+        self.pool3 = nn.MaxPool2d(kernel_size=2, stride=2, ceil_mode=True)  # ceiling (not floor) here for even dims
 
         self.conv4_1 = nn.Conv2d(256, 512, kernel_size=3, padding=1)
         self.conv4_2 = nn.Conv2d(512, 512, kernel_size=3, padding=1)
-        self.conv4_3 = nn.Conv2d(512, 512, kernel_size=3, padding=1)
+        # self.conv4_3 = nn.Conv2d(512, 512, kernel_size=3, padding=1)
         self.inorm_4 = nn.InstanceNorm2d(512)
-        self.pool4 = nn.AvgPool2d(kernel_size=2, stride=2)
+        self.pool4 = nn.MaxPool2d(kernel_size=2, stride=2)
 
         self.conv5_1 = nn.Conv2d(512, 512, kernel_size=3, padding=1)
-        self.conv5_2 = nn.Conv2d(512, 512, kernel_size=3, padding=1)
-        self.conv5_3 = nn.Conv2d(512, 512, kernel_size=3, padding=1)
+        # self.conv5_2 = nn.Conv2d(512, 512, kernel_size=3, padding=1)
+        # self.conv5_3 = nn.Conv2d(512, 512, kernel_size=3, padding=1)
         self.inorm_5 = nn.InstanceNorm2d(512)
-        self.pool5 = nn.AvgPool2d(kernel_size=3, stride=1, padding=1)  # retains size because stride is 1 (and padding)
+        self.pool5 = nn.MaxPool2d(kernel_size=3, stride=1, padding=1)  # retains size because stride is 1 (and padding)
 
         # Replacements for FC6 and FC7 in VGG16
         self.conv6 = nn.Conv2d(512, 1024, kernel_size=3, padding=6, dilation=6)  # atrous convolution
@@ -86,10 +86,26 @@ class VGGBackbone(nn.Module):
         """
 
         # print("For image", image)
-        c1_mem = c1_spike = torch.zeros(param.batch_size, 64, 300, 300, device=self.device)
-        c2_mem = c2_spike = torch.zeros(param.batch_size, 128, 150, 150, device=self.device)
-        c3_mem = c3_spike = torch.zeros(param.batch_size, 256, 75, 75, device=self.device)
-        c4_mem = c4_spike = c4_sumspike = torch.zeros(param.batch_size, 512, 38, 38, device=self.device)
+
+        # c1_mem = c1_spike = torch.zeros(param.batch_size, 64, 300, 300, device=self.device)
+        # c2_mem = c2_spike = torch.zeros(param.batch_size, 128, 150, 150, device=self.device)
+        # c3_mem = c3_spike = torch.zeros(param.batch_size, 256, 75, 75, device=self.device)
+        # c4_mem = c4_spike = c4_sumspike = torch.zeros(param.batch_size, 512, 38, 38, device=self.device)
+        # c5_mem = c5_spike = torch.zeros(param.batch_size, 512, 19, 19, device=self.device)
+        # c6_mem = c6_spike = torch.zeros(param.batch_size, 1024, 19, 19, device=self.device)
+        # c7_mem = c7_spike = c7_sumspike = torch.zeros(param.batch_size, 1024, 19, 19, device=self.device)
+        #
+        # a1_mem = a1_spike = a1_sumspike = torch.zeros(param.batch_size, 512, 10, 10, device=self.device)
+        # a2_mem = a2_spike = a2_sumspike = torch.zeros(param.batch_size, 256, 5, 5, device=self.device)
+        # a3_mem = a3_spike = a3_sumspike = torch.zeros(param.batch_size, 256, 3, 3, device=self.device)
+        # a4_mem = a4_spike = a4_sumspike = torch.zeros(param.batch_size, 256, 1, 1, device=self.device)
+        # # print("c1_mem_init",c1_mem)
+
+        c1_mem = c1_spike = torch.zeros(param.batch_size, 64, 150, 150, device=self.device)
+        c2_mem = c2_spike = torch.zeros(param.batch_size, 128, 75, 75, device=self.device)
+        c3_mem = c3_spike = torch.zeros(param.batch_size, 256, 38, 38, device=self.device)
+        c4_1_mem = c4_1_spike = c4_sumspike = torch.zeros(param.batch_size, 512, 38, 38, device=self.device)
+        c4_2_mem = c4_2_spike = torch.zeros(param.batch_size, 512, 19, 19, device=self.device)
         c5_mem = c5_spike = torch.zeros(param.batch_size, 512, 19, 19, device=self.device)
         c6_mem = c6_spike = torch.zeros(param.batch_size, 1024, 19, 19, device=self.device)
         c7_mem = c7_spike = c7_sumspike = torch.zeros(param.batch_size, 1024, 19, 19, device=self.device)
@@ -99,88 +115,37 @@ class VGGBackbone(nn.Module):
         a3_mem = a3_spike = a3_sumspike = torch.zeros(param.batch_size, 256, 3, 3, device=self.device)
         a4_mem = a4_spike = a4_sumspike = torch.zeros(param.batch_size, 256, 1, 1, device=self.device)
 
-        # print("c1_mem_init",c1_mem)
-        # c4_spike_rec = []
-        # c7_spike_rec = []
-
         for step in range(param.time_window):
             # print("time step: ", step)
             new_image = image[:, step:step+1, :, :]
+            # print("new image", new_image.shape)
+            c1_mem, c1_spike = mem_update_pool(self.conv1_1,self.pool1, new_image, c1_mem, c1_spike, self.inorm_1, True)
+            out = c1_spike  # (N, 64, 150, 150)
 
-            # print("image", new_image)
-            out = F.relu(self.conv1_1(new_image))  # (N, 64, 300, 300)
-            # print("conv 1 1 before norm", out)
-            out = self.inorm_1(out)
-            # out = F.relu(self.conv1_2(out))  # (N, 64, 300, 300)
-            # print("conv 1 1 after norm", out)
-            c1_mem, c1_spike = mem_update(self.conv1_2, out, c1_mem, c1_spike)
-            # print(c1_spike.shape)
-            # print("c1 mem", c1_mem)
-            # print("c1 spike before norm", c1_spike)
-            #
-            # print("c1_spike_after norm", c1_spike)
-            out = self.pool1(c1_spike)  # (N, 64, 150, 150)
+            c2_mem, c2_spike = mem_update_pool(self.conv2_1, self.pool2, out, c2_mem, c2_spike, self.inorm_2, True)
+            out = c2_spike # (N, 128, 75, 75)
 
-            spikes_1 = out
-            # print("Spikes 1:", spikes_1)
+            c3_mem, c3_spike = mem_update_pool(self.conv3_1, self.pool3, out, c3_mem, c3_spike, self.inorm_3, True)
+            out = c3_spike  # (N, 256, 38, 38), it would have been 37 if not for ceil_mode = True
 
-            out = F.relu(self.conv2_1(out))  # (N, 128, 150, 150)
-            # out = F.relu(self.conv2_2(out))  # (N, 128, 150, 150)
-            c2_mem, c2_spike = mem_update(self.conv2_2, out, c2_mem, c2_spike)
-            c2_spike = self.inorm_2(c2_spike)
-            out = self.pool2(c2_spike)  # (N, 128, 75, 75)
+            c4_1_mem, c4_1_spike = mem_update(self.conv4_1, out, c4_1_mem, c4_1_spike)
+            out = conv4_3_feats = c4_1_spike  # (N, 512, 38, 38)
+            c4_sumspike += conv4_3_feats  # feature map for head
 
-            spikes_2 = out
-            # print("Spikes 2:", spikes_2)
+            c4_2_mem, c4_2_spike = mem_update_pool(self.conv4_2, self.pool4, out, c4_2_mem, c4_2_spike, self.inorm_4, True)
+            out = c4_2_spike  # (N, 512, 19, 19)
 
-            out = F.relu(self.conv3_1(out))  # (N, 256, 75, 75)
-            out = F.relu(self.conv3_2(out))  # (N, 256, 75, 75)
-            # out = F.relu(self.conv3_3(out))  # (N, 256, 75, 75)
-            c3_mem, c3_spike = mem_update(self.conv3_3, out, c3_mem, c3_spike)
-            c3_spike = self.inorm_3(c3_spike)
-            out = self.pool3(c3_spike)  # (N, 256, 38, 38), it would have been 37 if not for ceil_mode = True
+            c5_mem, c5_spike = mem_update_pool(self.conv5_1, self.pool5, out, c5_mem, c5_spike, self.inorm_5, True)
+            out = c5_spike  # (N, 512, 19, 19), pool5 does not reduce dimensions
 
-            spikes_3 = out
-            # print("Spikes 3:", spikes_3)
-
-            out = F.relu(self.conv4_1(out))  # (N, 512, 38, 38)
-            out = F.relu(self.conv4_2(out))  # (N, 512, 38, 38)
-            # out = F.relu(self.conv4_3(out))  # (N, 512, 38, 38)
-
-            c4_mem, c4_spike = mem_update(self.conv4_3, out, c4_mem, c4_spike)
-            c4_spike = self.inorm_4(c4_spike)
-            conv4_3_feats = c4_spike  # (N, 512, 38, 38)
-            c4_sumspike += conv4_3_feats
-            # c4_spike_rec.append(conv4_3_feats)
-            out = self.pool4(c4_spike)  # (N, 512, 19, 19)
-
-            spikes_4 = out
-            # print("Spikes 4:", spikes_4)
-
-            out = F.relu(self.conv5_1(out))  # (N, 512, 19, 19)
-            out = F.relu(self.conv5_2(out))  # (N, 512, 19, 19)
-            # out = F.relu(self.conv5_3(out))  # (N, 512, 19, 19)
-            c5_mem, c5_spike = mem_update(self.conv5_3, out, c5_mem, c5_spike)
-            c5_spike = self.inorm_5(c5_spike)
-            out = self.pool5(c5_spike)  # (N, 512, 19, 19), pool5 does not reduce dimensions
-
-            spikes_5 = out
-            # print("Spikes 5:", spikes_5)
-
-            # out = F.relu(self.conv6(out))  # (N, 1024, 19, 19)
             c6_mem, c6_spike = mem_update(self.conv6, out, c6_mem, c6_spike)
-            c6_spike = self.inorm_6(c6_spike)
+            out = c6_spike
 
-            spikes_6 = c6_spike
-            # print("Spikes 6:", spikes_6)
-
-            # conv7_feats = F.relu(self.conv7(out))  # (N, 1024, 19, 19)
-            c7_mem, c7_spike = mem_update(self.conv7, spikes_6, c7_mem, c7_spike)
-            c7_spike = self.inorm_7(c7_spike)
-            spikes_7 = c7_spike
+            c7_mem, c7_spike = mem_update(self.conv7, out, c7_mem, c7_spike)
             conv7_feats = c7_spike
             c7_sumspike += conv7_feats
-            # c7_spike_rec.append(conv7_feats)
+
+            # print("c7_spike", c7_spike)
 
             out = F.relu(self.conv8_1(conv7_feats))  # (N, 256, 19, 19)
             # out = F.relu(self.conv8_2(out))  # (N, 512, 10, 10)
@@ -220,6 +185,13 @@ class VGGBackbone(nn.Module):
         conv11_2_feats = a4_sumspike / param.time_window
 
         # print("Conv 4", conv4_3_feats)
+        # print("Conv 7", conv7_feats)
+        # print("Conv 8", conv7_feats)
+        # print("Conv 7", conv7_feats)
+        # print("Conv 7", conv7_feats)
+        # print("Conv 7", conv7_feats)
+
+
         # print("Conv 11", conv11_2_feats)
 
         return conv4_3_feats, conv7_feats, conv8_2_feats, conv9_2_feats,conv10_2_feats,conv11_2_feats

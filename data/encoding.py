@@ -77,22 +77,6 @@ def frequency_coding(images):
         images2[k, :, :] = (rate > ((k+1) / time_window)).float()
     return images2
 
-    # for row in range(rate.shape[0]):
-    #     for col in range(rate.shape[1]):
-    #         spikes = np.zeros((time_window))
-    #         time = rate[row][col] * (time_window)
-    #         time = int(time)
-    #         counter = 1
-    #         new_time = time * counter
-    #         while new_time < time_window:
-    #
-    #             spikes[new_time] = 1
-    #             counter += 1
-    #             new_time = new_time * counter
-    #         spike_train.append(spikes.tolist())
-    #
-    # return spike_train
-
 
 def time_to_first_coding(images):
     rate = 1 - images
@@ -100,3 +84,90 @@ def time_to_first_coding(images):
     for k in range(time_window):
         images2[k, :, :] = ((rate * time_window).round().to(torch.int) == k).float()
     return images2
+
+# Define Gaussian function
+def gaussian(x, mu, sigma):
+    # print("mu", mu)
+    # print("image", x)
+    # diff = x-mu
+    # numerator = diff ** 2
+    # denominator = (2 * sigma ** 2)
+    # out = (numerator / denominator)
+    # print("diff", diff)
+    # print("numer", numerator)
+    # print("denom",denominator)
+    # print("out", out)
+    # print("ret", torch.exp(-out))
+    return torch.exp(-((x-mu)**2)/(2*sigma**2))
+
+
+
+def population_encoding(image):
+    # I_min = np.min(image)
+    # I_max = np.max(image)
+
+    I_min = image.min().item()
+    I_max = image.max().item()
+
+    print("min", I_min)
+    print("max", I_max)
+
+    beta = 1.5  # Determines the spread of the Gaussians
+    M = time_window  # Number of Gaussians for population encoding
+    T_ref = 1  # Refractory period
+    dt = 1  # Time step
+
+    # Standard deviation for Gaussian functions
+    sigma = (1 / beta) * ((I_max - I_min) / (M - 2))
+
+    print("sigma", sigma)
+
+    mu = torch.tensor([I_min + ((2 * i - 3) / 2) * ((I_max - I_min) / (M - 2)) for i in range(M)])
+
+    # print("mu", mu)
+    #
+    # print("image", image)
+
+    # Compute spike times using vectorized operations
+    # Expand dimensions to allow for broadcasting
+    image_exp = image.unsqueeze(-1)  # Add a dimension for broadcasting with `mu`
+    mu_exp = mu.unsqueeze(0).unsqueeze(0)  # Add dimensions for broadcasting with `image_exp`
+
+    # print("diff",image_exp-mu_exp)
+
+    # print("imageshape", image_exp.shape)
+    # print("mushape", mu_exp.shape)
+    # Compute Gaussian responses for each pixel and each Gaussian
+    responses = gaussian(image_exp, mu_exp, sigma)
+
+    print("response gauss", responses.permute(2, 0, 1))
+
+    # Compute spike times using the refractory period and Gaussian responses
+    spike_trains = T_ref * (1 - responses)  # This is now fully vectorized
+
+    # Validate the shape of spike trains (should be 300x300x10)
+    # print("Spike Trains Shape:", spike_trains.shape)
+
+    spike_trains_reshaped = spike_trains.permute(2, 0, 1)
+
+
+    # spike_trains = torch.zeros((image.size(0), image.size(1), M))
+    #
+    # # Loop through the image and compute spike times for each pixel
+    # for row in range(image.shape[0]):
+    #     for col in range(image.shape[1]):
+    #         pixel_value = image[row, col]
+    #         spike_responses = torch.zeros(M)
+    #
+    #         # Compute spike times for each Gaussian
+    #         for k in range(M):
+    #             response = gaussian(pixel_value, mu[k], sigma)
+    #             adjusted_response = T_ref * (1 - response)  # Adjust with refractory time
+    #             spike_responses[k] = adjusted_response
+    #
+    #         # print("response", response, row, col)
+    #
+    #         spike_trains[row, col] = spike_responses
+
+    return spike_trains_reshaped
+
