@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 from dummy_model import *
 from utils.parameters import *
@@ -21,6 +22,13 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 #
 
 # prior_box, info = create_prior_boxes(device)
+
+box = []
+box = np.array(box, dtype=float)
+box = torch.tensor(box, dtype=torch.float32)
+
+print(box)
+
 threshold = 0.5
 variances = [0.1, 0.2]
 truths = torch.tensor([[0.5, 0.5, 0.7, 0.7], [0.3, 0.3, 0.7, 0.6]])

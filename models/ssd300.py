@@ -57,4 +57,4 @@ class SSD300(nn.Module):
         locs, classes_scores = self.pred_convs(conv4_3_feats, conv7_feats, conv8_2_feats, conv9_2_feats, conv10_2_feats,
                                                conv11_2_feats)
 
-        return locs, classes_scores
+        return locs, classes_scores, conv4_3_feats, conv7_feats

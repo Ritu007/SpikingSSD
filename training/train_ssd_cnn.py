@@ -5,7 +5,7 @@ import time
 import random
 # from model import *
 import torch
-from models.spiking_ssd300 import *
+from models.ssd300 import *
 # from models.ssd300 import *
 import utils.parameters as param
 from data.encoding import *
@@ -35,8 +35,8 @@ annotations_folder = "E:/Project Work/Datasets/Self Driving Car.v3-fixed-small.y
 annotations_folder = 'E:/Project Work/Datasets/pascalvoc2012/archive/VOC2012_train_val/VOC2012_train_val/train_val/labels'
 # annotations_folder = 'D:/RiturajMtechProject/Datasets/Oxford Pets.v2-by-species.yolov8/train/labels'
 
-custom_dataset = ObjectDetectionDataset(image_folder, annotations_folder, rgb=False, transform=transform)
-custom_dataloader = DataLoader(custom_dataset, batch_size=param.batch_size, collate_fn=collate_fn, shuffle=False, num_workers=0)
+custom_dataset = ObjectDetectionDataset(image_folder, annotations_folder, rgb=True, transform=transform)
+custom_dataloader = DataLoader(custom_dataset, batch_size=param.batch_size, collate_fn=collate_fn, shuffle=True, num_workers=0)
 
 
 print("Total Number of Samples:", len(custom_dataset))
@@ -68,18 +68,18 @@ for real_epoch in range(param.num_epoch):
     for epoch in range(param.sub_epoch):
         print("Sub-epoch: ", epoch)
         for i, (images, labels, masks, boxes, image_path) in enumerate(custom_dataloader):
-
+            print("images", images.shape)
             # print("Labels", labels.shape)
             # print("Boxes", boxes[0][0])
 
-            images2 = torch.empty((images.shape[0], param.time_window, images.shape[2], images.shape[3]))
+            images2 = torch.empty((images.shape[0], images.shape[1], images.shape[2], images.shape[3]))
             labels2 = torch.empty((images.shape[0], param.max_num_boxes), dtype=torch.int64)
             boxes2 = torch.empty((images.shape[0], param.max_num_boxes, 4), dtype=torch.float32)
 
 
             for j in range(images.shape[0]):
                 # print("image", images[j, 0, :, :])
-                img0 = frequency_coding(images[j, 0, :, :])
+                img0 = (images[j, 0, :, :])
                 # print("image after coding",img0)
                 images2[j, :, :, :] = (img0)
                 labels2[j] = labels[j]
@@ -106,10 +106,10 @@ for real_epoch in range(param.num_epoch):
             # labels_ = torch.zeros(param.batch_size, param.num_classes).scatter_(1, labels2.view(-1, 1), 1)
             # print("Labels: ", labels_.shape)
 
-            locs, class_scores = snn(images2)
+            locs, class_scores, c4, c7 = snn(images2)
 
-            # print("Conv 4", c4_cumm)
-            # print("Conv 7", c7_cumm)
+            print("Conv 4", c4)
+            print("Conv 7", c7)
             # print("Conv 8", conv7_feats.shape)
             # print("Conv 7", conv7_feats.shape)
             # print("Conv 7", conv7_feats.shape)

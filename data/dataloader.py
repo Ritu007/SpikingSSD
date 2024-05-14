@@ -45,13 +45,13 @@ class ObjectDetectionDataset(Dataset):
         labels = []
 
         if len(lines) == 0:
-            lines.append("11 0.5 0.5 1 1\n")
+            lines.append("0 0.5 0.5 1 1\n")
         for line in lines:
             # print(line)
             values = line.split()
             # print(values)
             box = np.array(values[1:], dtype=float)
-            label = int(values[0])
+            label = int(values[0]) + 1
             # if label == 0:
             #     print(img_path)
             boxes.append(box)
@@ -67,7 +67,7 @@ class ObjectDetectionDataset(Dataset):
         else:
             img, boxes, labels = self.transform(img, boxes, labels, True)
 
-        return img, boxes, labels
+        return img, boxes, labels, img_path
 
 
 def transform(img, boxes, labels, rgb=False):
@@ -103,7 +103,7 @@ def collate_fn(batch):
     padded_bbox = []
     max_num_boxes = param.max_num_boxes
 
-    for img, boxes, labels in batch:
+    for img, boxes, labels, image_path in batch:
         images.append(img)
 
         num_boxes = len(boxes)
@@ -123,6 +123,6 @@ def collate_fn(batch):
     padded_bbox = torch.stack(padded_bbox)
     # print("Mask", bbox_masks.shape)
 
-    return images, bbox_labels, bbox_masks, padded_bbox
+    return images, bbox_labels, bbox_masks, padded_bbox, image_path
 
 

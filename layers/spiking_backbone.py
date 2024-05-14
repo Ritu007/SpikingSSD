@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from utils.surrogates import *
+import torchvision
+from utils.box_utils import decimate
 
 
 class VGGBase(nn.Module):
@@ -43,7 +45,7 @@ class VGGBase(nn.Module):
         self.conv7 = nn.Conv2d(1024, 1024, kernel_size=1)
 
         # Load pretrained layers
-        # self.load_pretrained_layers()
+        self.load_pretrained()
 
     def forward(self, image):
         """
@@ -70,7 +72,6 @@ class VGGBase(nn.Module):
             print("time step: ", step)
             new_image = image[:, step:step+1, :, :]
 
-            # print("image", new_image)
             out = F.relu(self.conv1_1(new_image))  # (N, 64, 300, 300)
             # out = F.relu(self.conv1_2(out))  # (N, 64, 300, 300)
             # print("conv 1 1", out)
@@ -135,6 +136,35 @@ class VGGBase(nn.Module):
             # print("Spikes 7:", spikes_7)
         # Lower-level feature maps
         return spikes_7, torch.stack(c4_spike_rec).permute(1, 0, 2, 3, 4), torch.stack(c7_spike_rec).permute(1, 0, 2, 3, 4)
+
+    def load_pretrained(self):
+        '''
+            Use a VGG-16 pretrained on the ImageNet task for conv1-->conv5
+            Convert conv6, conv7 to pretrained
+        '''
+        print("Loading pretrained base model...")
+        state_dict = self.state_dict()
+        param_names = list(state_dict.keys())
+
+        pretrained_state_dict = torchvision.models.vgg16(pretrained=True).state_dict()
+        pretrained_param_names = list(pretrained_state_dict.keys())
+
+        for i, parameters in enumerate(param_names[:26]):
+            state_dict[parameters] = pretrained_state_dict[pretrained_param_names[i]]
+
+        # convert fc6, fc7 in pretrained to conv6, conv7 in model
+        fc6_weight = pretrained_state_dict['classifier.0.weight'].view(4096, 512, 7, 7)
+        fc6_bias = pretrained_state_dict['classifier.0.bias']
+        state_dict['conv6.weight'] = decimate(fc6_weight, m=[4, None, 3, 3])  # (1024, 512, 3, 3)
+        state_dict['conv6.bias'] = decimate(fc6_bias, m=[4])  # (1024)
+
+        fc7_weight = pretrained_state_dict['classifier.3.weight'].view(4096, 4096, 1, 1)
+        fc7_bias = pretrained_state_dict['classifier.3.bias']
+        state_dict['conv7.weight'] = decimate(fc7_weight, m=[4, 4, None, None])
+        state_dict['conv7.bias'] = decimate(fc7_bias, m=[4])
+
+        self.load_state_dict(state_dict)
+        print("Loaded base model")
 
 class AuxiliaryConvolutions(nn.Module):
     def __init__(self, device):
