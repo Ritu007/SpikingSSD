@@ -108,8 +108,8 @@ with torch.no_grad():
 
         # final_boxes = decoded_boxes[keep[:count]]
 
-        print("final", final_boxes.shape)
-        print("final", final_scores)
+        # print("final", final_boxes.shape)
+        # print("final", final_scores)
 
 
 
@@ -121,7 +121,7 @@ with torch.no_grad():
 
         #Filtering process
         filtered_boxes, filtered_scores= filter_by_confidence(final_scores, final_boxes, param.num_classes)
-        print("filtered_boxes", filtered_boxes.shape)
+        print("filtered_boxes", filtered_boxes)
         print("filtered_scores", filtered_scores)
         # print("filtered_classes", filtered_classes.shape)
 

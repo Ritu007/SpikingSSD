@@ -105,10 +105,13 @@ class VGGBackbone(nn.Module):
         c2_mem = c2_spike = torch.zeros(param.batch_size, 128, 75, 75, device=self.device)
         c3_mem = c3_spike = torch.zeros(param.batch_size, 256, 38, 38, device=self.device)
         c4_1_mem = c4_1_spike = c4_sumspike = torch.zeros(param.batch_size, 512, 38, 38, device=self.device)
+        c4_features_cumm = torch.zeros(param.batch_size, param.time_window, 512, 38, 38, device=self.device)
         c4_2_mem = c4_2_spike = torch.zeros(param.batch_size, 512, 19, 19, device=self.device)
+
         c5_mem = c5_spike = torch.zeros(param.batch_size, 512, 19, 19, device=self.device)
         c6_mem = c6_spike = torch.zeros(param.batch_size, 1024, 19, 19, device=self.device)
         c7_mem = c7_spike = c7_sumspike = torch.zeros(param.batch_size, 1024, 19, 19, device=self.device)
+        c7_features_cumm = torch.zeros(param.batch_size, param.time_window, 1024, 19, 19, device=self.device)
 
         a1_mem = a1_spike = a1_sumspike = torch.zeros(param.batch_size, 512, 10, 10, device=self.device)
         a2_mem = a2_spike = a2_sumspike = torch.zeros(param.batch_size, 256, 5, 5, device=self.device)
@@ -119,7 +122,7 @@ class VGGBackbone(nn.Module):
             # print("time step: ", step)
             new_image = image[:, step:step+1, :, :]
             # print("new image", new_image.shape)
-            c1_mem, c1_spike = mem_update_pool(self.conv1_1,self.pool1, new_image, c1_mem, c1_spike, self.inorm_1, True)
+            c1_mem, c1_spike = mem_update_pool(self.conv1_1, self.pool1, new_image, c1_mem, c1_spike, self.inorm_1, True)
             out = c1_spike  # (N, 64, 150, 150)
 
             c2_mem, c2_spike = mem_update_pool(self.conv2_1, self.pool2, out, c2_mem, c2_spike, self.inorm_2, True)
@@ -130,10 +133,13 @@ class VGGBackbone(nn.Module):
 
             c4_1_mem, c4_1_spike = mem_update(self.conv4_1, out, c4_1_mem, c4_1_spike)
             out = conv4_3_feats = c4_1_spike  # (N, 512, 38, 38)
+            c4_features_cumm[:, step, :, :] = conv4_3_feats
             c4_sumspike += conv4_3_feats  # feature map for head
 
             c4_2_mem, c4_2_spike = mem_update_pool(self.conv4_2, self.pool4, out, c4_2_mem, c4_2_spike, self.inorm_4, True)
             out = c4_2_spike  # (N, 512, 19, 19)
+
+
 
             c5_mem, c5_spike = mem_update_pool(self.conv5_1, self.pool5, out, c5_mem, c5_spike, self.inorm_5, True)
             out = c5_spike  # (N, 512, 19, 19), pool5 does not reduce dimensions
@@ -143,6 +149,8 @@ class VGGBackbone(nn.Module):
 
             c7_mem, c7_spike = mem_update(self.conv7, out, c7_mem, c7_spike)
             conv7_feats = c7_spike
+
+            c7_features_cumm[:, step, :, :] = conv7_feats
             c7_sumspike += conv7_feats
 
             # print("c7_spike", c7_spike)
@@ -194,7 +202,7 @@ class VGGBackbone(nn.Module):
 
         # print("Conv 11", conv11_2_feats)
 
-        return conv4_3_feats, conv7_feats, conv8_2_feats, conv9_2_feats,conv10_2_feats,conv11_2_feats
+        return conv4_3_feats, conv7_feats, conv8_2_feats, conv9_2_feats,conv10_2_feats,conv11_2_feats, c4_features_cumm, c7_features_cumm
 
 # class AuxiliaryConvolutions(nn.Module):
 #     def __init__(self, device):

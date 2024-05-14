@@ -14,7 +14,7 @@ import torchvision
 import torchvision.transforms as transforms
 from utils.prior_boxes import *
 # from encoding import *
-
+torch.autograd.set_detect_anomaly(True)
 names = 'spiking_model_custom_data_rgb'
 count = 0
 data_path = './raw1/'  # ta" if torch.cuda.is_available() else "cpu")
@@ -77,8 +77,8 @@ for real_epoch in range(param.num_epoch):
 
             for j in range(images.shape[0]):
                 # print("image", images[j, 0, :, :])
-                img0 = population_encoding(images[j, 0, :, :])
-                print("image after coding",img0)
+                img0 = frequency_coding(images[j, 0, :, :])
+                # print("image after coding",img0)
                 images2[j, :, :, :] = (img0)
                 labels2[j] = labels[j]
                 boxes2[j] = boxes[j]
@@ -103,7 +103,45 @@ for real_epoch in range(param.num_epoch):
 
             # labels_ = torch.zeros(param.batch_size, param.num_classes).scatter_(1, labels2.view(-1, 1), 1)
             # print("Labels: ", labels_.shape)
+
             locs, class_scores = snn(images2)
+
+            # print("Conv 4", c4_cumm)
+            # print("Conv 7", c7_cumm)
+            # print("Conv 8", conv7_feats.shape)
+            # print("Conv 7", conv7_feats.shape)
+            # print("Conv 7", conv7_feats.shape)
+            # print("Conv 7", conv7_feats.shape)
+
+            # # Reshape the tensor for visualization (assuming all batches have same spike response)
+            #   # Taking the first batch for visualization
+            #
+            # spike_response = c7_cumm[0]  # Taking the first batch for visualization
+            #
+            # # Create subplots for each time step
+            # fig, axs = plt.subplots(2, 4, figsize=(16, 8))
+            #
+            # # Plot spike responses for each time step
+            # for t in range(param.time_window):
+            #     row = t // 4
+            #     col = t % 4
+            #     ax = axs[row, col]
+            #     ax.set_title(f'Time Step {t}')
+            #     ax.set_xlabel('X Dimension')
+            #     ax.set_ylabel('Y Dimension')
+            #
+            #     # Get spike responses for the current time step
+            #     spike_map = spike_response[t]
+            #
+            #     # Plot spikes at corresponding spatial locations
+            #     for i in range(c7_cumm.shape[3]):
+            #         for j in range(c7_cumm.shape[3]):
+            #             print("ij", i, j)
+            #             if spike_map[0, i, j].item() == 1:
+            #                 ax.scatter(j, i, color='black', marker='o')  # Plot spike at (x, y)
+            #
+            # plt.tight_layout()
+            # plt.show()
 
             # print("locaton shape", locs.shape)
             # print("class score shape", class_scores.shape)
@@ -132,7 +170,7 @@ for real_epoch in range(param.num_epoch):
 if not os.path.isdir('trained_models'):
     os.mkdir('trained_models')
 
-torch.save(snn.state_dict(), './trained_models/pascal_object_detection_model.pth')
+torch.save(snn.state_dict(), './trained_models/alt_pascal_object_detection_model.pth')
 
     # # ================================== Test ==============================
     # correct = 0

@@ -56,6 +56,9 @@ class ObjectDetectionDataset(Dataset):
             #     print(img_path)
             boxes.append(box)
             labels.append(label)
+
+        boxes = np.array(boxes, dtype=float)
+        labels = np.array(labels, dtype=float)
         boxes = torch.tensor(boxes, dtype=torch.float32)
         labels = torch.tensor(labels, dtype=torch.float32)
 

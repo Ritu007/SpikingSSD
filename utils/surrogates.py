@@ -120,23 +120,34 @@ class Sigmoid(torch.autograd.Function):
         return grad, None
 
 
-act_fun = ActFun.apply
+act_fun = ATan.apply
 
 
 # membrane potential update
 
 def mem_update(ops, x, mem, spike):
+    mem = mem * (1 - spike)  # reset membrane potential if a spike is generated in the previous time stamp.
     mem = mem * param.decay + F.relu(ops(x))
     spike = act_fun(mem)  # act_fun : approximation firing function
+
     return mem, spike
 
 
 #  Membrane potential update with pooling included in the operations
 def mem_update_pool(ops, pool, x, mem, spike, inorm, norm=False):
+    mem = mem * (1 - spike)  # reset membrane potential if a spike is generated in the previous time stamp.
     if norm:
         out = pool(F.relu(inorm(ops(x))))
     else:
         out = pool(F.relu(ops(x)))
     mem = mem * param.decay + out
     spike = act_fun(mem)  # act_fun : approximation firing function
+
+    return mem, spike
+
+def mem_update_reset(ops, x, mem, spike, refractory_period=0, reset_after_spike=False):
+    mem *= param.decay
+    mem += F.relu(ops(x))
+    spike = act_fun(mem)
+    mem *= (1 - spike)
     return mem, spike

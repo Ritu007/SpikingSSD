@@ -22,8 +22,8 @@ def center_size(boxes):
     Return:
         boxes: (tensor) Converted xmin, ymin, xmax, ymax form of boxes.
     """
-    return torch.cat((boxes[:, 2:] + boxes[:, :2])/2,  # cx, cy
-                     boxes[:, 2:] - boxes[:, :2], 1)  # w, h
+    return torch.cat(((boxes[:, 2:] + boxes[:, :2])/2,  # cx, cy
+                     boxes[:, 2:] - boxes[:, :2]), dim=1)  # w, h
 
 
 def intersect(box_a, box_b):
@@ -64,6 +64,8 @@ def jaccard(box_a, box_b):
         jaccard overlap: (tensor) Shape: [box_a.size(0), box_b.size(0)]
     """
     inter = intersect(box_a, box_b)
+
+    # print("inter", inter)
     area_a = ((box_a[:, 2]-box_a[:, 0]) *
               (box_a[:, 3]-box_a[:, 1])).unsqueeze(1).expand_as(inter)  # [A,B]
     area_b = ((box_b[:, 2]-box_b[:, 0]) *
@@ -128,7 +130,8 @@ def match(threshold, truths, priors, variances, labels, loc_t, conf_t, idx):
     # print("matches", matches)
     conf = labels[best_truth_idx]       # Shape: [num_priors]
     # print("Conf", conf)
-    # print("best truth overlap", best_truth_overlap)
+    # v,idx = best_truth_overlap.sort(0)
+    # print("best truth overlap", v)
     conf[best_truth_overlap < threshold] = 0  # label as background
     # print("conf1", conf)
     loc = encode(matches, priors, variances)
@@ -151,6 +154,7 @@ def encode(matched, priors, variances):
     Return:
         encoded boxes (tensor), Shape: [num_priors, 4]
     """
+    # priors = center_size(priors)
     matched = point_form(matched)
     # print("variances", variances)
     # print("min", torch.min(matched))
@@ -164,7 +168,7 @@ def encode(matched, priors, variances):
     g_wh = (matched[:, 2:] - matched[:, :2]) / priors[:, 2:]
     # print("g_wh", g_wh)
     # print("log_gwhy", torch.log(g_wh))
-    # print("variance1", variances[1])
+    # print("variance1", variances[0])
     g_wh = torch.log(g_wh) / variances[1]
     # print("g_wh", g_wh)
     # return target for smooth_l1_loss
