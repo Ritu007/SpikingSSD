@@ -2,8 +2,6 @@ from __future__ import print_function
 from data.dataloader import *
 import os
 import time
-import random
-# from model import *
 import torch
 from models.spiking_ssd300 import *
 # from models.ssd300 import *
@@ -13,7 +11,7 @@ from loss_function.multibox_loss import MultiBoxLoss
 import torchvision
 import torchvision.transforms as transforms
 from utils.prior_boxes import *
-# from encoding import *
+from utils.box_utils import *
 import math
 
 torch.autograd.set_detect_anomaly(True)
@@ -193,10 +191,16 @@ for real_epoch in range(param.num_epoch):
                 running_loss = 0
                 print('Time elasped:', time.time() - start_time)
 
+    optimizer = lr_scheduler(optimizer, real_epoch, learning_rate, 10)
+
+
 if not os.path.isdir('trained_models'):
     os.mkdir('trained_models')
 
 torch.save(snn.state_dict(), './trained_models/alt_pascal_object_detection_model.pth')
+
+
+
 
     # # ================================== Test ==============================
     # correct = 0

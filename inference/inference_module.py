@@ -1,13 +1,6 @@
-
 from __future__ import print_function
-
-import cv2
-
-from data.dataloader import *
 import os
 import time
-import random
-import torch
 from models.spiking_ssd300 import *
 import utils.parameters as param
 from data.encoding import *

@@ -112,6 +112,7 @@ def match(threshold, truths, priors, variances, labels, loc_t, conf_t, idx):
     # (Bipartite Matching)
     # [1,num_objects] best prior for each ground truth
     best_prior_overlap, best_prior_idx = overlaps.max(1, keepdim=True)
+    # print("best prior", best_prior_overlap)
     # [1,num_priors] best ground truth for each prior
     best_truth_overlap, best_truth_idx = overlaps.max(0, keepdim=True)
     best_truth_idx.squeeze_(0)
@@ -120,14 +121,16 @@ def match(threshold, truths, priors, variances, labels, loc_t, conf_t, idx):
     best_prior_overlap.squeeze_(1)
     best_truth_overlap.index_fill_(0, best_prior_idx, 2)  # ensure best prior
     #
-    # print("best prior", best_prior_idx)
+    print("best prior", best_prior_overlap)
     # print("best truth", best_truth_idx)
     # TODO refactor: index  best_prior_idx with long tensor
     # ensure every gt matches with its prior of max overlap
     for j in range(best_prior_idx.size(0)):
         best_truth_idx[best_prior_idx[j]] = j
+
+    print("best truth", best_truth_idx)
     matches = truths[best_truth_idx]          # Shape: [num_priors,4]
-    # print("matches", matches)
+    print("matches", matches)
     conf = labels[best_truth_idx]       # Shape: [num_priors]
     # print("Conf", conf)
     # v,idx = best_truth_overlap.sort(0)
@@ -309,3 +312,11 @@ def decimate(tensor, m):
                                          index=torch.arange(start=0, end=tensor.size(d), step=m[d]).long())
 
     return tensor
+
+
+def lr_scheduler(optimizer, epoch, init_lr=0.1, lr_decay_epoch=50):
+    """Decay learning rate by a factor of 0.1 every lr_decay_epoch epochs."""
+    if epoch % lr_decay_epoch == 0 and epoch > 1:
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = param_group['lr'] * 0.1
+    return optimizer
