@@ -2,8 +2,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-# from layers.spiking_backbone import *
-from layers.spiking_backbone_full import *
+from layers.spiking_backbone import *
+# from layers.spiking_backbone_full import *
 from layers.spiking_head import *
 from utils.prior_boxes import *
 
@@ -19,9 +19,9 @@ class SSD300(nn.Module):
 
         self.n_classes = n_classes
         self.device = device
-        # self.base = VGGBase(self.device)
-        self.backbone = VGGBackbone(self.device)
-        # self.aux_convs = AuxiliaryConvolutions(self.device)
+        self.base = VGGBase(self.device)
+        # self.backbone = VGGBackbone(self.device)
+        self.aux_convs = AuxiliaryConvolutions(self.device)
         self.pred_convs = PredictionConvolutions(n_classes)
 
         # Since lower level features (conv4_3_feats) have considerably larger scales, we take the L2 norm and rescale
@@ -43,22 +43,24 @@ class SSD300(nn.Module):
         :return: 8732 locations and class scores (i.e. w.r.t each prior box) for each image
         """
         # Run VGG base network convolutions
-        # spikes, conv4_3_feats, conv7_feats = self.base(image)  # (N, 512, 38, 38), (N, 1024, 19, 19)
+        conv4_3_feats, conv7_feats = self.base(image)  # (N, 512, 38, 38), (N, 1024, 19, 19)
 
-        conv4_3_feats, conv7_feats, conv8_2_feats, conv9_2_feats, conv10_2_feats, conv11_2_feats= self.backbone(image)  # (N, 512, 38, 38), (N, 1024, 19, 19)
+        # conv4_3_feats, conv7_feats, conv8_2_feats, conv9_2_feats, conv10_2_feats, conv11_2_feats= self.backbone(image)  # (N, 512, 38, 38), (N, 1024, 19, 19)
 
 
 
         # Rescale conv4_3 after L2 norm
-        epsilon = 1e-6
-        norm = conv4_3_feats.pow(2).sum(dim=1, keepdim=True).sqrt() + epsilon  # (N, 1, 38, 38)
-        # print("norm", norm)
-        conv4_3_feats = conv4_3_feats / norm  # (N, 512, 38, 38)
-        conv4_3_feats = conv4_3_feats * self.rescale_factors  # (N, 512, 38, 38)
+        # epsilon = 1e-6
+        # norm = conv4_3_feats.pow(2).sum(dim=1, keepdim=True).sqrt() + epsilon  # (N, 1, 38, 38)
+        # # print("norm", norm)
+        # conv4_3_feats = conv4_3_feats / norm  # (N, 512, 38, 38)
+        # conv4_3_feats = conv4_3_feats * self.rescale_factors  # (N, 512, 38, 38)
+
+
 
         # Run auxiliary convolutions
         # (N, 512, 10, 10),  (N, 256, 5, 5), (N, 256, 3, 3), (N, 256, 1, 1)
-        # conv8_2_feats, conv9_2_feats, conv10_2_feats, conv11_2_feats = self.aux_convs(conv7_feats)
+        conv8_2_feats, conv9_2_feats, conv10_2_feats, conv11_2_feats = self.aux_convs(conv7_feats)
 
         # Run prediction convolutions
         # (N, 8732, 4), (N, 8732, n_classes)
@@ -71,7 +73,7 @@ class SSD300(nn.Module):
         # return locs, classes_scores
 
         # return spikes, conv4_3_feats, conv7_feats
-        return  locs, classes_scores
+        return  locs, classes_scores, conv4_3_feats, conv7_feats, conv8_2_feats, conv9_2_feats, conv10_2_feats, conv11_2_feats
 
         # return conv7_feats, conv8_feats, conv9_feats, conv10_feats, conv11_feats
 

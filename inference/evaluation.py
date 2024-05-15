@@ -77,6 +77,7 @@ def get_final_predictions(image, locs, scores):
     locations_abs[:, 2] *= image_width  # xmax
     locations_abs[:, 3] *= image_height  # ymax
 
+    print("absolute locs", locations_abs)
 
     image_np = np.array(image_pil)  # Convert back to numpy for OpenCV
 

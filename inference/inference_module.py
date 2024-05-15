@@ -13,6 +13,7 @@ import utils.parameters as param
 from data.encoding import *
 from inference.evaluation import *
 import torchvision.transforms as transforms
+from data.config import *
 
 names = 'spiking_model_custom_data_rgb'
 count = 0
@@ -72,17 +73,22 @@ def get_model_outputs_new(model, input):
     # prior_box, info = create_prior_boxes(device)
 
     for j in range(locs.shape[0]):
-        decoded_boxes[j, :, :] = decoding_boxes(locs[j, :, :], prior_box)
-        filtered_boxes, filtered_scores = filter_by_confidence(scores[j, :, :], decoded_boxes[j, :, :], param.num_classes, confidence_threshold=0.5)
-        print("filtered_boxes", filtered_boxes.shape)
+        # decoded_boxes[j, :, :] = decoding_boxes(locs[j, :, :], prior_box)
+        print("locs", locs[j, :, :])
+        decoded_boxes[j, :, :] = decode(locs[j, :, :], prior_box, variances=voc['variance'])
+        print("decode", decoded_boxes)
+
+        filtered_boxes, filtered_scores = filter_by_confidence(scores[j, :, :], decoded_boxes[j, :, :], param.num_classes, confidence_threshold=0.4)
+        print("filtered_boxes", filtered_boxes)
         print("filtered_scores", filtered_scores)
+
         predicted_classes = torch.argmax(filtered_scores, dim=1).unsqueeze(0)
         print("pred_class", predicted_classes)
-        keep, count = nms(filtered_boxes, predicted_classes[j, :], 0.4)
-        final_boxes = decoded_boxes[j, :, :][keep[:count]]
-        final_scores = scores[j, :, :][keep[:count]]
-    print("keep", keep)
-    print("count", count)
+        keep, count = nms(filtered_boxes, predicted_classes[j, :], 0.3)
+        final_boxes = filtered_boxes[keep[:count]]
+        final_scores = filtered_scores[keep[:count]]
+        print("keep", keep)
+        print("count", count)
     # filtered_boxes, filtered_scores = filter_by_confidence(final_scores, final_boxes, param.num_classes)
 
     return final_boxes, final_scores
@@ -103,17 +109,17 @@ def get_model_outputs(model, input):
     # prior_box, info = create_prior_boxes(device)
 
     for j in range(locs.shape[0]):
-        decoded_boxes[j, :, :] = decoding_boxes(locs[j, :, :], prior_box)
+        decoded_boxes[j, :, :] = decode(locs[j, :, :], prior_box, variances=voc['variance'])
 
-        keep, count = nms(decoded_boxes[j, :, :], predicted_classes[j, :])
+        keep, count = nms(decoded_boxes[j, :, :], predicted_classes[j, :], 0.2)
         final_boxes = decoded_boxes[j, :, :][keep[:count]]
         final_scores = scores[j, :, :][keep[:count]]
-    print("keep", keep)
-    print("count", count)
-    filtered_boxes, filtered_scores = filter_by_confidence(final_scores, final_boxes, param.num_classes, confidence_threshold=0.5)
-    print("filtered_boxes", filtered_boxes)
-    print("filtered_scores", filtered_scores.shape)
-    return prior_box, scores
+        print("keep", keep)
+        print("count", count)
+        filtered_boxes, filtered_scores = filter_by_confidence(final_scores, final_boxes, param.num_classes, confidence_threshold=0.4)
+        print("filtered_boxes", filtered_boxes)
+        print("filtered_scores", filtered_scores.shape)
+    return filtered_boxes, filtered_scores
 
 
 with torch.no_grad():
@@ -121,9 +127,9 @@ with torch.no_grad():
         encoded_image = get_encoded_image(image)
         batched_image = encoded_image.unsqueeze(0)
         print("bat",batched_image.shape)
-        locs, scores = get_model_outputs(snn, batched_image)
+        locs, scores = get_model_outputs_new(snn, batched_image)
 
-        print("locs", locs.shape)
-        print("scores", scores.shape)
-        get_final_predictions(image, locs, scores[0])
+        print("locs", locs)
+        print("scores", scores)
+        get_final_predictions(image, locs, scores)
         time.sleep(2)

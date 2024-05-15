@@ -57,7 +57,7 @@ snn.to(device)
 # optimizer = torch.optim.Adam(snn.parameters(), lr=param.learning_rate)
 
 optimizer = torch.optim.SGD(snn.parameters(), lr=param.learning_rate)
-criterion = MultiBoxLoss(param.num_classes, 0.3, True, 0, True, 3, 0.5,
+criterion = MultiBoxLoss(param.num_classes, 0.5, True, 0, True, 3, 0.5,
                          False, True)
 
 # ================================== Train ==============================
@@ -79,6 +79,10 @@ for real_epoch in range(param.num_epoch):
 
             for j in range(images.shape[0]):
                 # print("image", images[j, 0, :, :])
+                img0 = (images[j, 0, :, :])
+                # image_np = np.array(img0)
+                # cv2.imshow("Image", image_np)
+
                 img0 = frequency_coding(images[j, 0, :, :])
                 # print("image after coding",img0)
                 images2[j, :, :, :] = (img0)
@@ -106,7 +110,24 @@ for real_epoch in range(param.num_epoch):
             # labels_ = torch.zeros(param.batch_size, param.num_classes).scatter_(1, labels2.view(-1, 1), 1)
             # print("Labels: ", labels_.shape)
 
-            locs, class_scores = snn(images2)
+            locs, class_scores, c4, c7, c8, c9, c10, c11 = snn(images2)
+
+            # print("c4", c4)
+
+            # selected_feature_maps = c4[0, :32, :, :]  # Assuming batch size is 1
+            # num_rows = 4
+            # num_cols = 8
+            # fig, axes = plt.subplots(num_rows, num_cols, figsize=(16, 8))
+            # axes = axes.flatten()
+            # # Plot each feature map
+            # for i in range(len(axes)):
+            #     ax = axes[i]
+            #     ax.imshow(selected_feature_maps[i].detach().cpu().numpy(), cmap='gray')
+            #     ax.axis('off')
+            #
+            # # Adjust layout and display the plot
+            # plt.tight_layout()
+            # plt.show()
 
             # print("Conv 4", c4_cumm)
             # print("Conv 7", c7_cumm)

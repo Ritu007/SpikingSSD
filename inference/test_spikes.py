@@ -43,7 +43,7 @@ validation_dataset = ObjectDetectionDataset(val_image_folder, val_annotations_fo
 if param.batch_size > 1:
     validation_dataloader = DataLoader(validation_dataset, batch_size=param.batch_size, collate_fn=collate_fn, shuffle=True, num_workers=0)
 else:
-    validation_dataloader = DataLoader(validation_dataset, batch_size=1, shuffle=True, num_workers=0)
+    validation_dataloader = DataLoader(validation_dataset, batch_size=param.batch_size, shuffle=True, num_workers=0)
 
 
 snn = SSD300(n_classes=param.num_classes, device=device)
@@ -59,7 +59,7 @@ total = 0
 # cm = np.zeros((10, 10), dtype=np.int32)
 
 with torch.no_grad():
-    for i, (images, boxes, labels) in enumerate(validation_dataloader):
+    for i, (images, boxes, labels, image_path) in enumerate(validation_dataloader):
 
         images2 = torch.empty((images.shape[0], param.time_window, images.shape[2], images.shape[3]))
         labels2 = torch.empty((images.shape[0], param.max_num_boxes), dtype=torch.int64)
@@ -67,6 +67,15 @@ with torch.no_grad():
         decoded_boxes = torch.empty((images.shape[0], 8732, 4), dtype=torch.float32, device=device)
         print("images",images.shape)
         # for j in range(images.shape[0]):
+        img0 = images[0, 0, :, :]
+
+        print(img0.shape)
+        image_np = np.array(img0)
+        cv2.imshow("Image", image_np)
+        if cv2.waitKey(25) & 0xFF == ord('q'):
+            cv2.destroyAllWindows()
+            break
+
         img0 = frequency_coding(images[0, 0, :, :])
             # print(img0)
         images2[:, :, :] = (img0)
@@ -84,7 +93,24 @@ with torch.no_grad():
         boxes_with_labels = boxes_with_labels.to(device)
         images2 = images2.float().to(device)
 
-        locs, class_scores = snn(images2)
+        locs, class_scores, c4, c7, c8, c9, c10, c11 = snn(images2)
+
+        print("c4", c4)
+
+        selected_feature_maps = c4[0, :32, :, :]  # Assuming batch size is 1
+        num_rows = 4
+        num_cols = 8
+        fig, axes = plt.subplots(num_rows, num_cols, figsize=(16, 8))
+        axes = axes.flatten()
+        # Plot each feature map
+        for i in range(len(axes)):
+            ax = axes[i]
+            ax.imshow(selected_feature_maps[i].detach().cpu().numpy(), cmap='gray')
+            ax.axis('off')
+
+        # Adjust layout and display the plot
+        plt.tight_layout()
+        plt.show()
 
         # print("locs", locs.shape)
         class_probabilities = F.softmax(class_scores, dim=2)

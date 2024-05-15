@@ -151,6 +151,7 @@ class VGGBackbone(nn.Module):
             c4_spike = self.inorm_4(c4_spike)
             conv4_3_feats = c4_spike  # (N, 512, 38, 38)
             c4_sumspike += conv4_3_feats
+            print("c4sumspike", c4_sumspike)
             # c4_spike_rec.append(conv4_3_feats)
             out = self.pool4(c4_spike)  # (N, 512, 19, 19)
 
@@ -212,7 +213,7 @@ class VGGBackbone(nn.Module):
             # print("conv 11 features:", conv11_2_feats)
             # print("Spikes 7:", spikes_7)
         # Lower-level feature maps
-        conv4_3_feats = c4_sumspike/param.time_window
+        conv4_3_feats = c4_sumspike/ param.time_window
         conv7_feats = c7_sumspike / param.time_window
         conv8_2_feats = a1_sumspike / param.time_window
         conv9_2_feats = a2_sumspike / param.time_window
