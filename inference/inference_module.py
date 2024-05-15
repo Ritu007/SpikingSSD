@@ -25,7 +25,7 @@ print(device)
 snn = SSD300(n_classes=param.num_classes, device=device)
 snn.to(device)
 
-snn.load_state_dict(torch.load('E:/Python/SpikingSSD/training/trained_models/pascal_object_detection_model.pth'))
+snn.load_state_dict(torch.load('E:/Python/SpikingSSD/training/trained_models/alt_pascal_object_detection_model.pth'))
 snn.eval()
 
 image_path = "E:/Project Work/Datasets/pascalvoc2012/archive/VOC2012_test/VOC2012_test/images"
@@ -60,7 +60,7 @@ def get_encoded_image(image):
 
 def get_model_outputs_new(model, input):
     input = input.to(device)
-    locs, scores = model(input)
+    locs, scores, conv4_3_feats, conv7_feats, conv8_2_feats, conv9_2_feats, conv10_2_feats, conv11_2_feats = model(input)
     prior_box, info = create_prior_boxes(device)
     decoded_boxes = torch.empty((param.batch_size, 8732, 4), dtype=torch.float32, device=device)
     # print("locs", locs.shape)
@@ -78,7 +78,7 @@ def get_model_outputs_new(model, input):
         decoded_boxes[j, :, :] = decode(locs[j, :, :], prior_box, variances=voc['variance'])
         print("decode", decoded_boxes)
 
-        filtered_boxes, filtered_scores = filter_by_confidence(scores[j, :, :], decoded_boxes[j, :, :], param.num_classes, confidence_threshold=0.4)
+        filtered_boxes, filtered_scores = filter_by_confidence(scores[j, :, :], decoded_boxes[j, :, :], param.num_classes, confidence_threshold=0.3)
         print("filtered_boxes", filtered_boxes)
         print("filtered_scores", filtered_scores)
 
@@ -96,14 +96,14 @@ def get_model_outputs_new(model, input):
 
 def get_model_outputs(model, input):
     input = input.to(device)
-    locs, scores = model(input)
+    locs, scores, conv4_3_feats, conv7_feats, conv8_2_feats, conv9_2_feats, conv10_2_feats, conv11_2_feats = model(input)
     prior_box, info = create_prior_boxes(device)
     decoded_boxes = torch.empty((param.batch_size, 8732, 4), dtype=torch.float32, device=device)
     # print("locs", locs.shape)
     class_probabilities = F.softmax(scores, dim=2)
     # print("class prob", class_probabilities)
 
-    predicted_classes = torch.argmax(class_probabilities, dim=2)
+    predicted_classes = torch.argmax(class_probabilities[:, : , 1:], dim=2)
     print("pred_class", predicted_classes)
 
     # prior_box, info = create_prior_boxes(device)
@@ -111,15 +111,15 @@ def get_model_outputs(model, input):
     for j in range(locs.shape[0]):
         decoded_boxes[j, :, :] = decode(locs[j, :, :], prior_box, variances=voc['variance'])
 
-        keep, count = nms(decoded_boxes[j, :, :], predicted_classes[j, :], 0.2)
+        keep, count = nms(decoded_boxes[j, :, :], predicted_classes[j, :], 0.1)
         final_boxes = decoded_boxes[j, :, :][keep[:count]]
         final_scores = scores[j, :, :][keep[:count]]
         print("keep", keep)
         print("count", count)
-        filtered_boxes, filtered_scores = filter_by_confidence(final_scores, final_boxes, param.num_classes, confidence_threshold=0.4)
+        filtered_boxes, filtered_scores = filter_by_confidence(final_scores, final_boxes, param.num_classes, confidence_threshold=0.3)
         print("filtered_boxes", filtered_boxes)
         print("filtered_scores", filtered_scores.shape)
-    return filtered_boxes, filtered_scores
+    return final_boxes, final_scores
 
 
 with torch.no_grad():
@@ -127,7 +127,7 @@ with torch.no_grad():
         encoded_image = get_encoded_image(image)
         batched_image = encoded_image.unsqueeze(0)
         print("bat",batched_image.shape)
-        locs, scores = get_model_outputs_new(snn, batched_image)
+        locs, scores = get_model_outputs(snn, batched_image)
 
         print("locs", locs)
         print("scores", scores)

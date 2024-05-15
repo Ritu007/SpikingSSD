@@ -81,7 +81,7 @@ def get_final_predictions(image, locs, scores):
 
     image_np = np.array(image_pil)  # Convert back to numpy for OpenCV
 
-    scores, class_indices = torch.max(scores, dim=1)
+    scores, class_indices = torch.max(scores[:, 1:], dim=1)
 
     boxes_clamped = torch.clone(locations_abs)
     boxes_clamped[:, 0] = torch.clamp(locations_abs[:, 0], min=0, max=image_width)  # xmin
