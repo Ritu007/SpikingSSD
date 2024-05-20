@@ -49,7 +49,7 @@ else:
 snn = SSD300(n_classes=param.num_classes, device=device)
 snn.to(device)
 
-snn.load_state_dict(torch.load('E:/Python/SpikingSSD/training/trained_models/pascal_object_detection_model.pth'))
+snn.load_state_dict(torch.load('E:/Python/SpikingSSD/training/trained_models/alt_pascal_object_detection_model.pth'))
 snn.eval()
 
 # ================================== Test ==============================
@@ -93,11 +93,17 @@ with torch.no_grad():
         boxes_with_labels = boxes_with_labels.to(device)
         images2 = images2.float().to(device)
 
-        locs, class_scores, c4, c7, c8, c9, c10, c11 = snn(images2)
+        locs, class_scores, c1, c4, c7, c8, c9, c10, c11 = snn(images2)
 
-        print("c4", c4)
+        print("c1",c1.shape)
 
-        selected_feature_maps = c4[0, :32, :, :]  # Assuming batch size is 1
+        input_tensor_reshaped = c1.unsqueeze(2)
+
+        resized_tensor = F.interpolate(c1, size=(512, 38, 38), mode='bilinear', align_corners=False)
+
+        print("c4", resized_tensor.shape)
+
+        selected_feature_maps = resized_tensor[0, :32, :, :]  # Assuming batch size is 1
         num_rows = 4
         num_cols = 8
         fig, axes = plt.subplots(num_rows, num_cols, figsize=(16, 8))

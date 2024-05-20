@@ -81,13 +81,13 @@ class MultiBoxLoss(nn.Module):
             non_padded_mask = (labels != -1).unsqueeze(1).expand_as(truths)
             # print("non padded mask", non_padded_mask)
             truths = truths[non_padded_mask].view(-1, 4)
-            print("Truths non padded", truths)
+            # print("Truths non padded", truths)
             labels = labels[labels != -1]
-            print("labels non padded", labels)
+            # print("labels non padded", labels)
 
 
             defaults = priors.data
-            print("defaults", priors)
+            # print("defaults", priors)
             match(self.threshold, truths, defaults, self.variance, labels,
                   loc_t, conf_t, idx)
         if self.use_gpu:
@@ -97,9 +97,9 @@ class MultiBoxLoss(nn.Module):
         loc_t = Variable(loc_t, requires_grad=False)
         conf_t = Variable(conf_t, requires_grad=False)
 
-        print("loc_t", loc_t)
-        print("Conf_t", conf_t)
-        print("Conf_t", conf_t.shape)
+        # print("loc_t", loc_t)
+        # print("Conf_t", conf_t)
+        # print("Conf_t", conf_t.shape)
 
         non_zero_mask = conf_t > 0
 

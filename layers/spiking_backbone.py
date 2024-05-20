@@ -50,6 +50,7 @@ class VGGBase(nn.Module):
         self.inorm_1 = nn.InstanceNorm2d(64)
         self.pool1 = nn.AvgPool2d(kernel_size=2, stride=2)
 
+
         self.conv2_1 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
         self.conv2_2 = nn.Conv2d(128, 128, kernel_size=3, padding=1)
         self.inorm_2 = nn.InstanceNorm2d(128)
@@ -94,7 +95,7 @@ class VGGBase(nn.Module):
 
         # print("For image", image)
         c1_1mem = c1_1spike = torch.zeros(param.batch_size, 64, 300, 300, device=self.device)
-        c1_2mem = c1_2spike = torch.zeros(param.batch_size, 64, 300, 300, device=self.device)
+        c1_2mem = c1_2spike = c1sumspike =  torch.zeros(param.batch_size, 64, 300, 300, device=self.device)
         c2_1mem = c2_1spike = torch.zeros(param.batch_size, 128, 150, 150, device=self.device)
         c2_2mem = c2_2spike = torch.zeros(param.batch_size, 128, 150, 150, device=self.device)
         c3_1mem = c3_1spike = torch.zeros(param.batch_size, 256, 75, 75, device=self.device)
@@ -121,6 +122,8 @@ class VGGBase(nn.Module):
 
             c1_1mem, c1_1spike = mem_update(self.conv1_1, new_image, c1_1mem, c1_1spike, self.inorm_1, True)   # (N, 64, 300, 300)
             c1_2mem, c1_2spike = mem_update(self.conv1_2, c1_1spike, c1_2mem, c1_2spike, self.inorm_1, True)   # (N, 64, 300, 300)
+            conv1feats = c1_2spike
+            c1sumspike += conv1feats
             out = self.pool1(c1_2spike)  # (N, 64, 150, 150)
 
             c2_1mem, c2_1spike = mem_update(self.conv2_1, out, c2_1mem, c2_1spike, self.inorm_2, True)  # (N, 128, 150, 150)
@@ -153,9 +156,15 @@ class VGGBase(nn.Module):
             c7_sumspike += conv7_feats
 
         # Lower-level feature maps
+        conv1feats = c1sumspike/ param.time_window
+        # resized_output = torch.nn.functional.interpolate(conv1feats, size=(38, 38), mode='bilinear',
+        #                                                  align_corners=False)
+        # print("res", resized_output.shape)
+        # conv1feats = self.feat_conv_layer(resized_output)
+        # print("con1", conv1feats.shape)
         conv4_3_feats = c4_sumspike / param.time_window
         conv7_feats = c7_sumspike / param.time_window
-        return conv4_3_feats, conv7_feats
+        return conv1feats, conv4_3_feats, conv7_feats
 
     def load_pretrained(self):
         '''
@@ -265,6 +274,8 @@ class AuxiliaryConvolutions(nn.Module):
         super(AuxiliaryConvolutions, self).__init__()
         #input (N, 1024, 19, 19) that is conv7_feats
         # Auxiliary/additional convolutions on top of the VGG base
+        self.feat_conv_layer = nn.Conv2d(64, 512, kernel_size=3, stride=1, padding=1)
+
         self.conv8_1 = nn.Conv2d(1024, 256, kernel_size=1, padding=0)  # stride = 1, by default
         self.conv8_2 = nn.Conv2d(256, 512, kernel_size=3, stride=2, padding=1)  # dim. reduction because stride > 1
 
@@ -288,13 +299,19 @@ class AuxiliaryConvolutions(nn.Module):
             if isinstance(c, nn.Conv2d):
                 nn.init.xavier_uniform_(c.weight)
                 nn.init.constant_(c.bias, 0.)
-    def forward(self, conv7_feats):
+    def forward(self, conv1, conv7_feats):
         """
         Forward propagation.
 
         :param conv7_feats: lower-level conv7 feature map, a tensor of dimensions (N, 1024, 19, 19)
         :return: higher-level feature maps (N, 512, 10, 10), (N, 256, 5, 5), (N, 256, 3, 3) and (N, 256, 1, 1)
         """
+        resized_output = torch.nn.functional.interpolate(conv1, size=(38, 38), mode='bilinear',
+                                                         align_corners=False)
+        # print("res", resized_output.shape)
+        conv1feats = self.feat_conv_layer(resized_output)
+        # print("con1", conv1feats.shape)
+
         out = F.relu(self.conv8_1(conv7_feats))  # (N, 256, 19, 19)
         out = F.relu(self.conv8_2(out))  # (N, 512, 10, 10)
         conv8_2_feats = out  # (N, 512, 10, 10)
@@ -311,4 +328,4 @@ class AuxiliaryConvolutions(nn.Module):
         conv11_2_feats = F.relu(self.conv11_2(out))  # (N, 256, 1, 1)
 
         # Higher-level feature maps
-        return conv8_2_feats, conv9_2_feats, conv10_2_feats, conv11_2_feats
+        return conv1feats, conv8_2_feats, conv9_2_feats, conv10_2_feats, conv11_2_feats

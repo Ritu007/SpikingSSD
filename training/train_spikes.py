@@ -108,11 +108,11 @@ for real_epoch in range(param.num_epoch):
             # labels_ = torch.zeros(param.batch_size, param.num_classes).scatter_(1, labels2.view(-1, 1), 1)
             # print("Labels: ", labels_.shape)
 
-            locs, class_scores, c4, c7, c8, c9, c10, c11 = snn(images2)
+            locs, class_scores, c1, c4, c7, c8, c9, c10, c11 = snn(images2)
 
-            # print("c4", c4)
-
-            # selected_feature_maps = c4[0, :32, :, :]  # Assuming batch size is 1
+            # print("c4", c1.shape)
+            #
+            # selected_feature_maps = c1[0, :32, :, :]  # Assuming batch size is 1
             # num_rows = 4
             # num_cols = 8
             # fig, axes = plt.subplots(num_rows, num_cols, figsize=(16, 8))
